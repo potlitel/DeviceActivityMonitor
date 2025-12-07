@@ -14,5 +14,6 @@
 
   <ItemGroup>
     <ProjectReference Include="..\DAM.Core\DAM.Core.csproj" />
+    <ProjectReference Include="..\DAM.Infrastructure\DAM.Infrastructure.csproj" />
   </ItemGroup>
 </Project>
