@@ -11,17 +11,31 @@ namespace DAM.Host.WindowsService;
 /// <remarks>
 /// Hereda de <see cref="BackgroundService"/> para ejecutarse como un servicio de larga duración.
 /// </remarks>
-public class Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IActivityStorageService storageService) : BackgroundService
+public class Worker : BackgroundService
 {
-    private readonly ILogger<Worker> _logger = logger;
-    private readonly IDeviceMonitor _deviceMonitor = deviceMonitor;
-    private readonly ILoggerFactory _loggerFactory = loggerFactory;
-    private readonly IActivityStorageService _storageService = storageService;
+    private readonly ILogger<Worker> _logger;
+    private readonly IDeviceMonitor _deviceMonitor;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly IActivityStorageService _storageService;
 
     /// <summary>
     /// Colección concurrente para mantener un <see cref="DeviceActivityWatcher"/> activo por cada dispositivo conectado.
     /// </summary>
     private readonly ConcurrentDictionary<string, DeviceActivityWatcher> _activeWatchers = new();
+
+    /// <summary>
+    /// Inicializa una nueva instancia de <see cref="Worker"/>.
+    /// </summary>
+    /// <param name="logger">Servicio de logging.</param>
+    /// <param name="deviceMonitor">Monitor de eventos de hardware (WMI).</param>
+    /// <param name="storageService">Servicio resiliente para la persistencia de datos (<see cref="IActivityStorageService"/>).</param>
+    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IActivityStorageService storageService)
+    {
+        _logger = logger;
+        _deviceMonitor = deviceMonitor;
+        _loggerFactory = loggerFactory;
+        _storageService = storageService;
+    }
 
     /// <inheritdoc/>
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
