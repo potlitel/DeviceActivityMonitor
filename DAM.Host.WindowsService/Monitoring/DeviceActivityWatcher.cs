@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Entities;
+using System.Management;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
@@ -10,6 +11,7 @@ namespace DAM.Host.WindowsService.Monitoring
         private readonly string _driveLetter; // Ej: "E:"
         private readonly FileSystemWatcher _watcher;
         private readonly DeviceActivity _activity;
+        private readonly ILogger<DeviceActivityWatcher> _logger;
 
         // Campos privados para la capacidad.
         private readonly long _initialTotalCapacity;
@@ -76,25 +78,125 @@ namespace DAM.Host.WindowsService.Monitoring
             }
 
             // --- 2. Configuración del FileSystemWatcher ---
-            _watcher = new FileSystemWatcher(driveLetter)
+            try
             {
-                NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.DirectoryName,
-                IncludeSubdirectories = true,
-                EnableRaisingEvents = true
-            };
+                _watcher = new FileSystemWatcher(driveLetter)
+                {
+                    NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.DirectoryName,
+                    IncludeSubdirectories = true,
+                    EnableRaisingEvents = true
+                };
 
-            // Suscripción a eventos de E/S
-            _watcher.Created += OnFileCreated;
-            _watcher.Deleted += OnFileDeleted;
+                // Suscripción a eventos de E/S
+                _watcher.Created += OnFileCreated;
+                _watcher.Deleted += OnFileDeleted;
+                // Manejar errores internos del FileSystemWatcher (robustez)
+                _watcher.Error += OnWatcherError;
+            }
+            catch (ArgumentException ex)
+            {
+                // Esto ocurre si la letra de unidad no es válida o ya no existe.
+                _logger.LogError(ex, "Error al crear FileSystemWatcher para la unidad {DriveLetter}.", driveLetter);
+                // Si el watcher no se puede inicializar, el monitoreo de E/S falla, pero el registro básico continúa.
+                _watcher = new FileSystemWatcher(); // Inicializar con dummy para evitar NullReferenceException
+            }
             // Otros eventos como Renamed o Changed pueden ser monitoreados para una lógica más fina.
         }
 
         // --- Métodos de Recolección de Información ---
 
-        // Simulación: Obtener Número de Serie (requiere WMI más detallado o PInvoke)
-        private string GetSerialNumber(string driveRoot) => $"SN-{driveRoot.Replace(":", "")}-{Guid.NewGuid().ToString().Substring(0, 4)}";
-        private string GetModel(string driveRoot) => $"Generic USB Drive {driveRoot.Replace(":", "")}";
+        /// <summary>
+        /// Obtiene el Número de Serie de un dispositivo físico correlacionado con una letra de unidad lógica.
+        /// </summary>
+        private string GetSerialNumber(string driveRoot)
+        {
+            // La letra de unidad debe terminar en dos puntos, ej: "E:"
+            string driveLetter = driveRoot.TrimEnd('\\');
 
+            try
+            {
+                // 1. Encontrar la partición asociada al disco lógico
+                string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+
+                using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
+                {
+                    foreach (ManagementObject partition in searcherLogicalDisk.Get())
+                    {
+                        // 2. Encontrar el disco físico asociado a la partición
+                        string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+
+                        using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
+                        {
+                            foreach (ManagementObject disk in searcherPartition.Get())
+                            {
+                                // 3. El número de serie está en el campo 'Signature' o 'PNPDeviceID' en Win32_DiskDrive o 'Serial Number' en Win32_PhysicalMedia
+                                // Usaremos el PNPDeviceID o Model para una identificación única.
+                                return (disk["PNPDeviceID"]?.ToString() ?? "N/A") + "_" + (disk["Signature"]?.ToString() ?? "N/A");
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
+            }
+            return "UNKNOWN_WMI";
+        }
+        /// <summary>
+        /// Obtiene el Modelo del dispositivo físico asociado a la letra de unidad.
+        /// </summary>
+        private string GetModel(string driveRoot)
+        {
+            string driveLetter = driveRoot.TrimEnd('\\');
+            try
+            {
+                string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+
+                using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
+                {
+                    foreach (ManagementObject partition in searcherLogicalDisk.Get())
+                    {
+                        string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+
+                        using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
+                        {
+                            foreach (ManagementObject disk in searcherPartition.Get())
+                            {
+                                // El modelo se encuentra en el campo 'Model' de Win32_DiskDrive
+                                return disk["Model"]?.ToString() ?? "N/A";
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Fallo WMI al obtener Modelo para la unidad {DriveLetter}", driveLetter);
+            }
+            return "UNKNOWN_WMI";
+        }
+
+        // --- Manejo de Errores del Watcher ---
+
+        private void OnWatcherError(object sender, ErrorEventArgs e)
+        {
+            // Registra errores de E/S del FileSystemWatcher y lo reinicia si es necesario (patrón de recuperación).
+            _logger.LogError(e.GetException(), "Error I/O fatal en FileSystemWatcher para {DriveLetter}. Intentando recuperar.", _driveLetter);
+
+            // Intento de recuperación: Deshabilitar, esperar y habilitar
+            try
+            {
+                _watcher.EnableRaisingEvents = false;
+                Thread.Sleep(5000); // Esperar 5 segundos
+                _watcher.EnableRaisingEvents = true;
+                _logger.LogWarning("FileSystemWatcher para {DriveLetter} recuperado exitosamente.", _driveLetter);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, "Fallo al recuperar FileSystemWatcher para {DriveLetter}. Monitoreo de E/S perdido.", _driveLetter);
+            }
+        }
 
         // Manejo de Creación de Archivos (COPIA)
         private void OnFileCreated(object sender, FileSystemEventArgs e)
@@ -120,6 +222,7 @@ namespace DAM.Host.WindowsService.Monitoring
             {
                 // Manejo robusto de I/O (Fallos en el Watcher)
                 // Se debe loggear y potencialmente reiniciar el Watcher si el fallo es crítico.
+                _logger.LogWarning(ex, "Fallo al procesar evento de creación de archivo: {Path}", e.FullPath);
             }
         }
 
@@ -150,6 +253,7 @@ namespace DAM.Host.WindowsService.Monitoring
             catch (Exception ex)
             {
                 // Manejo robusto de I/O
+                _logger.LogWarning(ex, "Fallo al procesar evento de eliminación de archivo.");
             }
         }
 
