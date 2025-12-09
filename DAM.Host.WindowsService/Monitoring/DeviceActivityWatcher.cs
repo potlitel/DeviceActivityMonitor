@@ -1,7 +1,4 @@
 ﻿using DAM.Core.Entities;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
@@ -13,8 +10,10 @@ namespace DAM.Host.WindowsService.Monitoring
         private readonly string _driveLetter; // Ej: "E:"
         private readonly FileSystemWatcher _watcher;
         private readonly DeviceActivity _activity;
-        private long _initialSize;
-        private long _initialAvailable;
+
+        // Campos privados para la capacidad.
+        private readonly long _initialTotalCapacity;
+        private readonly long _initialAvailableSpace;
 
         /// <summary>
         /// Evento disparado cuando el dispositivo se desconecta y se completa la recolección de datos.
@@ -32,27 +31,51 @@ namespace DAM.Host.WindowsService.Monitoring
         public DeviceActivityWatcher(string driveLetter, ILogger<DeviceActivityWatcher> logger)
         {
             _driveLetter = driveLetter;
-            _activity = new DeviceActivity
-            {
-                InsertedAt = DateTime.Now,
-                // Llenar más info básica aquí usando WMI si es necesario.
-                // Por simplicidad ahora, solo la letra de unidad
-                SerialNumber = GetSerialNumber(driveLetter.TrimEnd('\\')),
-                Model = GetModel(driveLetter.TrimEnd('\\'))
-            };
 
-            // Recolección inicial de capacidad
+            // --- 1. Recolección de Información de Capacidad y Metadatos ---
             var driveInfo = new DriveInfo(driveLetter);
+
             if (driveInfo.IsReady)
             {
-                _initialSize = driveInfo.TotalSize;
-                _initialAvailable = driveInfo.AvailableFreeSpace;
-                _activity.TotalCapacityMB = driveInfo.TotalSize / (1024 * 1024);
-                _activity.InitialAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
-                _activity.FinalAvailableMB = _activity.InitialAvailableMB; // Inicialmente son iguales
+                // Almacenar valores brutos (Bytes)
+                _initialTotalCapacity = driveInfo.TotalSize;
+                _initialAvailableSpace = driveInfo.AvailableFreeSpace;
+
+                // Inicialización de la entidad
+                _activity = new DeviceActivity
+                {
+                    InsertedAt = DateTime.Now,
+                    // Conversión a MB para el registro (1024 * 1024)
+                    TotalCapacityMB = _initialTotalCapacity / (1024 * 1024),
+                    InitialAvailableMB = _initialAvailableSpace / (1024 * 1024),
+                    FinalAvailableMB = _initialAvailableSpace / (1024 * 1024), // Inicialmente son iguales
+
+                    // Metadatos que requerirían WMI real en producción
+                    SerialNumber = GetSerialNumber(driveLetter.TrimEnd('\\')),
+                    Model = GetModel(driveLetter.TrimEnd('\\')),
+                };
+            }
+            else
+            {
+                // Manejo de caso donde el disco no está listo inmediatamente (ej. fallo de montaje)
+                // Se inicializa con valores predeterminados y se loggea la advertencia.
+                _initialTotalCapacity = 0;
+                _initialAvailableSpace = 0;
+
+                _activity = new DeviceActivity
+                {
+                    InsertedAt = DateTime.Now,
+                    SerialNumber = "UNKNOWN_ERR",
+                    Model = "UNKNOWN_ERR",
+                    TotalCapacityMB = 0,
+                    InitialAvailableMB = 0,
+                    FinalAvailableMB = 0
+                };
+
+                logger.LogWarning("Drive {Drive} not ready upon insertion. Activity logging may be incomplete.", driveLetter);
             }
 
-            // Configuración del FileSystemWatcher (para COPIA/BORRADO)
+            // --- 2. Configuración del FileSystemWatcher ---
             _watcher = new FileSystemWatcher(driveLetter)
             {
                 NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.DirectoryName,
@@ -60,7 +83,7 @@ namespace DAM.Host.WindowsService.Monitoring
                 EnableRaisingEvents = true
             };
 
-            // Eventos para la recolección de métricas
+            // Suscripción a eventos de E/S
             _watcher.Created += OnFileCreated;
             _watcher.Deleted += OnFileDeleted;
             // Otros eventos como Renamed o Changed pueden ser monitoreados para una lógica más fina.
