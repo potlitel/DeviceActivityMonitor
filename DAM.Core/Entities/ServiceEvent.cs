@@ -1,6 +1,8 @@
 ﻿namespace DAM.Core.Entities
 {
-    // Entidad para registrar eventos del servicio (como la detención manual).
+    /// <summary>
+    /// Entidad para registrar eventos internos del servicio de Windows (ej. inicio, parada, intentos de detención).
+    /// </summary>
     public class ServiceEvent
     {
         public int Id { get; set; }

@@ -2,10 +2,26 @@
 
 namespace DAM.Core.Interfaces
 {
-    // Define el contrato para guardar datos, independientemente de si es local o remoto.
+    /// <summary>
+    /// Contrato para el servicio de almacenamiento de actividad, independientemente de si el destino es local (BD) o remoto (API).
+    /// </summary>
+    /// <remarks>
+    /// Este contrato es clave para implementar el patrón Strategy y el diseño resiliente de almacenamiento.
+    /// </remarks>
     public interface IActivityStorageService
     {
+        /// <summary>
+        /// Almacena una actividad de dispositivo, decidiendo la estrategia de persistencia (Local/Remoto).
+        /// </summary>
+        /// <param name="activity">La actividad del dispositivo a almacenar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
         Task StoreActivityAsync(DeviceActivity activity);
+
+        /// <summary>
+        /// Almacena un evento del servicio, decidiendo la estrategia de persistencia (Local/Remoto).
+        /// </summary>
+        /// <param name="serviceEvent">El evento del servicio a almacenar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
         Task StoreServiceEventAsync(ServiceEvent serviceEvent);
     }
 }

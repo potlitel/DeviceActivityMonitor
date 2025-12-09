@@ -3,21 +3,29 @@ using DAM.Core.Interfaces;
 
 namespace DAM.Infrastructure.Storage
 {
-    // Escribe directamente a la BD local (SQLite) usando el repositorio.
+    /// <summary>
+    /// Implementación del servicio de almacenamiento que escribe los datos de actividad directamente a la BD local (SQLite).
+    /// </summary>
     public class LocalDbStorageService : IActivityStorageService
     {
         private readonly IActivityRepository _repository;
 
+        /// <summary>
+        /// Inicializa una nueva instancia de <see cref="LocalDbStorageService"/>.
+        /// </summary>
+        /// <param name="repository">Repositorio de actividad que maneja la persistencia con EF Core.</param>
         public LocalDbStorageService(IActivityRepository repository)
         {
             _repository = repository;
         }
 
+        /// <inheritdoc/>
         public Task StoreActivityAsync(DeviceActivity activity)
         {
             return _repository.AddActivityAsync(activity);
         }
 
+        /// <inheritdoc/>
         public Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             return _repository.AddServiceEventAsync(serviceEvent);

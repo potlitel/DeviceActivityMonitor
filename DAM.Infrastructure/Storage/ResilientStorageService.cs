@@ -4,7 +4,13 @@ using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Storage
 {
-    // Este es el servicio que inyectaremos en el Worker.
+    /// <summary>
+    /// Servicio de almacenamiento principal que implementa la estrategia de resiliencia (Circuit Breaker).
+    /// </summary>
+    /// <remarks>
+    /// Decide dinámicamente si usar <see cref="ApiStorageService"/> (remoto) o <see cref="LocalDbStorageService"/> (local)
+    /// basándose en la disponibilidad de la Web API.
+    /// </remarks>
     public class ResilientStorageService : IActivityStorageService
     {
         private readonly IApiStatusChecker _apiChecker;
@@ -17,7 +23,13 @@ namespace DAM.Infrastructure.Storage
         private DateTime _lastCheck = DateTime.MinValue;
         private readonly TimeSpan _recheckInterval = TimeSpan.FromMinutes(1);
 
-        // Inyección de servicios concretos y el checker (Strategy Selector)
+        /// <summary>
+        /// Inicializa una nueva instancia de <see cref="ResilientStorageService"/>.
+        /// </summary>
+        /// <param name="apiChecker">Servicio para verificar el estado de la API.</param>
+        /// <param name="localService">Servicio de almacenamiento local.</param>
+        /// <param name="apiService">Servicio de almacenamiento remoto (API).</param>
+        /// <param name="logger">Servicio de logging.</param>
         public ResilientStorageService(
             IApiStatusChecker apiChecker,
             LocalDbStorageService localService,
@@ -30,6 +42,10 @@ namespace DAM.Infrastructure.Storage
             _logger = logger;
         }
 
+        /// <summary>
+        /// Determina la estrategia de almacenamiento actual basándose en la disponibilidad de la API.
+        /// </summary>
+        /// <returns>La implementación de <see cref="IActivityStorageService"/> a utilizar (API o Local).</returns>
         private async Task<IActivityStorageService> GetCurrentStorageStrategy()
         {
             // Usamos un Circuit Breaker simple: No re-chequeamos demasiado a menudo.
@@ -52,12 +68,14 @@ namespace DAM.Infrastructure.Storage
             }
         }
 
+        /// <inheritdoc/>
         public async Task StoreActivityAsync(DeviceActivity activity)
         {
             var strategy = await GetCurrentStorageStrategy();
             await strategy.StoreActivityAsync(activity);
         }
 
+        /// <inheritdoc/>
         public async Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             var strategy = await GetCurrentStorageStrategy();

@@ -3,10 +3,18 @@ using System.Management;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
-    // Implementación usando WMI (Windows Management Instrumentation) para eventos USB.
+    /// <summary>
+    /// Implementación del monitoreo de eventos de hardware de Windows utilizando WMI (Windows Management Instrumentation).
+    /// </summary>
+    /// <remarks>
+    /// Detecta la inserción y remoción de unidades lógicas (DriveType 2 = Removable).
+    /// </remarks>
     public class WmiDeviceMonitor : IDeviceMonitor, IDisposable
     {
+        /// <inheritdoc/>
         public event Action<string>? DeviceConnected;
+
+        /// <inheritdoc/>
         public event Action<string>? DeviceDisconnected;
 
         // WMI Query Language (WQL) para detectar inserción de dispositivos (DriveType 2=Removable)
@@ -20,6 +28,7 @@ namespace DAM.Host.WindowsService.Monitoring
         private ManagementEventWatcher? _connectWatcher;
         private ManagementEventWatcher? _disconnectWatcher;
 
+        /// <inheritdoc/>
         public void StartMonitoring()
         {
             // Observador de conexión
@@ -33,6 +42,7 @@ namespace DAM.Host.WindowsService.Monitoring
             _disconnectWatcher.Start();
         }
 
+        /// <inheritdoc/>
         public void StopMonitoring()
         {
             _connectWatcher?.Stop();
@@ -63,7 +73,9 @@ namespace DAM.Host.WindowsService.Monitoring
             }
         }
 
-        // Implementación de IDisposable para liberar recursos de WMI
+        /// <summary>
+        /// Libera los recursos de WMI.
+        /// </summary>
         public void Dispose()
         {
             _connectWatcher?.Dispose();

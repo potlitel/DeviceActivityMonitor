@@ -1,6 +1,9 @@
 ﻿namespace DAM.Core.Entities
 {
-    // Entidad para almacenar el historial de actividad de un dispositivo específico.
+    /// <summary>
+    /// Representa el registro de la actividad completa de un dispositivo de almacenamiento externo 
+    /// (ej. USB) durante una sesión de conexión a la estación de trabajo.
+    /// </summary>
     public class DeviceActivity
     {
         public int Id { get; set; }

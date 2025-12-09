@@ -5,15 +5,25 @@ using System.Collections.Concurrent;
 
 namespace DAM.Host.WindowsService;
 
-public class Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory) : BackgroundService
+/// <summary>
+/// Servicio principal de Windows que orquesta la detección de dispositivos y el ciclo de vida de los Watchers.
+/// </summary>
+/// <remarks>
+/// Hereda de <see cref="BackgroundService"/> para ejecutarse como un servicio de larga duración.
+/// </remarks>
+public class Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IActivityStorageService storageService) : BackgroundService
 {
     private readonly ILogger<Worker> _logger = logger;
     private readonly IDeviceMonitor _deviceMonitor = deviceMonitor;
     private readonly ILoggerFactory _loggerFactory = loggerFactory;
+    private readonly IActivityStorageService _storageService = storageService;
 
-    // Diccionario para mantener un Watcher por cada dispositivo activo.
+    /// <summary>
+    /// Colección concurrente para mantener un <see cref="DeviceActivityWatcher"/> activo por cada dispositivo conectado.
+    /// </summary>
     private readonly ConcurrentDictionary<string, DeviceActivityWatcher> _activeWatchers = new();
 
+    /// <inheritdoc/>
     protected override Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("DAM Worker Service starting at: {time}", DateTimeOffset.Now);
@@ -76,8 +86,11 @@ public class Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILogge
         }
     }
 
-    // Handler para cuando el Watcher tiene los datos finales
-    private void HandleActivityCompleted(DeviceActivity activity)
+    /// <summary>
+    /// Handler llamado cuando un <see cref="DeviceActivityWatcher"/> ha recolectado todos los datos al desconectarse.
+    /// </summary>
+    /// <param name="activity">Los datos finales de actividad.</param>
+    private async void HandleActivityCompleted(DeviceActivity activity)
     {
         _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
 
@@ -87,8 +100,18 @@ public class Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILogge
         // Ejemplo de métricas:
         // long diff = activity.InitialAvailableMB - activity.FinalAvailableMB;
         // _logger.LogInformation("Diff MB: {Diff}", diff); 
+        // Persistir la actividad usando el servicio resiliente (API o BD Local)
+        try
+        {
+            await _storageService.StoreActivityAsync(activity);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Fallo crítico al persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
+        }
     }
 
+    /// <inheritdoc/>
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("DAM Worker Service is stopping.");

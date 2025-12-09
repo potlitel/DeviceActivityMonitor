@@ -5,7 +5,9 @@ using System.Text;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
-    // Objeto Watcher por Dispositivo (Unidad)
+    /// <summary>
+    /// Objeto autónomo responsable de monitorear todas las operaciones de E/S (lectura/escritura) en un dispositivo conectado.
+    /// </summary>
     public class DeviceActivityWatcher : IDisposable
     {
         private readonly string _driveLetter; // Ej: "E:"
@@ -14,12 +16,19 @@ namespace DAM.Host.WindowsService.Monitoring
         private long _initialSize;
         private long _initialAvailable;
 
-        // Evento para notificar al servicio principal cuando el dispositivo se desconecta
+        /// <summary>
+        /// Evento disparado cuando el dispositivo se desconecta y se completa la recolección de datos.
+        /// </summary>
         public event Action<DeviceActivity>? ActivityCompleted;
 
         public string DriveLetter => _driveLetter;
         public DeviceActivity CurrentActivity => _activity;
 
+        /// <summary>
+        /// Inicializa una nueva instancia de <see cref="DeviceActivityWatcher"/>.
+        /// </summary>
+        /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
+        /// <param name="logger">El servicio de logging.</param>
         public DeviceActivityWatcher(string driveLetter, ILogger<DeviceActivityWatcher> logger)
         {
             _driveLetter = driveLetter;
@@ -121,7 +130,10 @@ namespace DAM.Host.WindowsService.Monitoring
             }
         }
 
-        // Método para ser llamado al desconectarse el dispositivo
+        /// <summary>
+        /// Finaliza la actividad de monitoreo, registra la capacidad final y reporta los datos recolectados.
+        /// </summary>
+        /// <param name="finalAvailableMB">La capacidad disponible al momento de la extracción.</param>
         public void FinalizeActivity(long finalAvailableMB)
         {
             _activity.ExtractedAt = DateTime.Now;
@@ -131,6 +143,9 @@ namespace DAM.Host.WindowsService.Monitoring
             ActivityCompleted?.Invoke(_activity);
         }
 
+        /// <summary>
+        /// Libera los recursos del <see cref="FileSystemWatcher"/>.
+        /// </summary>
         public void Dispose()
         {
             _watcher.Dispose();
