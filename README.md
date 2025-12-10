@@ -114,7 +114,7 @@ graph TD
 ### 1. Clonar el Repositorio
 
 ```bash
-git clone [https://github.com/potlitel/DeviceActivityMonitor.git](https://github.com/tu-usuario/DeviceActivityMonitor.git)
+git clone https://github.com/potlitel/DeviceActivityMonitor.git
 cd DeviceActivityMonitor
 ```
 
