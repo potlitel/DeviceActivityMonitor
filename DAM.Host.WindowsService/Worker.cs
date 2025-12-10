@@ -96,19 +96,21 @@ public class Worker : BackgroundService
         if (_activeWatchers.TryRemove(driveLetter, out var watcher))
         {
             // Recolectar la capacidad final antes de finalizar
-            long finalAvailableMB = 0;
-            try
-            {
-                var driveInfo = new DriveInfo(driveLetter);
-                if (driveInfo.IsReady)
-                {
-                    finalAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
-                }
-            }
-            catch { /* El disco ya puede no estar accesible */ }
+            //long finalAvailableMB = 0;
+            //try
+            //{
+            //    var driveInfo = new DriveInfo(driveLetter);
+            //    if (!driveInfo.IsReady)
+            //    {
+            //        finalAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
+            //    }
+            //}
+            //catch { /* El disco ya puede no estar accesible */ }
 
             // Finalizar el Watcher y reportar datos
-            watcher.FinalizeActivity(finalAvailableMB);
+
+            //watcher.FinalizeActivity(finalAvailableMB);
+            watcher.FinalizeActivity(watcher.CurrentActivity.FinalAvailableMB);
             watcher.Dispose();
 
             _logger.LogInformation("Total connected devices: {Count}", _activeWatchers.Count);
