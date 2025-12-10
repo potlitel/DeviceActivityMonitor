@@ -16,8 +16,8 @@ public class Worker : BackgroundService
     private readonly ILogger<Worker> _logger;
     private readonly IDeviceMonitor _deviceMonitor;
     private readonly ILoggerFactory _loggerFactory;
-    private readonly IActivityStorageService _storageService;
-
+    //private readonly IActivityStorageService _storageService;
+    private readonly IServiceScopeFactory _scopeFactory;
     /// <summary>
     /// Colección concurrente para mantener un <see cref="DeviceActivityWatcher"/> activo por cada dispositivo conectado.
     /// </summary>
@@ -29,12 +29,12 @@ public class Worker : BackgroundService
     /// <param name="logger">Servicio de logging.</param>
     /// <param name="deviceMonitor">Monitor de eventos de hardware (WMI).</param>
     /// <param name="storageService">Servicio resiliente para la persistencia de datos (<see cref="IActivityStorageService"/>).</param>
-    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IActivityStorageService storageService)
+    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
         _deviceMonitor = deviceMonitor;
         _loggerFactory = loggerFactory;
-        _storageService = storageService;
+        _scopeFactory = scopeFactory;
     }
 
     /// <inheritdoc/>
@@ -43,12 +43,16 @@ public class Worker : BackgroundService
         _logger.LogInformation("DAM Worker Service starting at: {time}", DateTimeOffset.Now);
 
         // 1. Registrar evento de inicio en la base de datos (Persistencia de Eventos)
-        await _storageService.StoreServiceEventAsync(new ServiceEvent
+        using (var scope = _scopeFactory.CreateScope())
         {
-            Timestamp = DateTime.Now,
-            EventType = "SERVICE_START",
-            Message = "El servicio Device Activity Monitor ha iniciado la ejecución."
-        });
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+            await storageService.StoreServiceEventAsync(new ServiceEvent
+            {
+                Timestamp = DateTime.Now,
+                EventType = "SERVICE_START",
+                Message = "El servicio Device Activity Monitor ha iniciado la ejecución."
+            });
+        }
 
         // 2. Configurar y arrancar el monitoreo WMI
         // Suscribirse a eventos de conexión/desconexión
@@ -140,22 +144,25 @@ public class Worker : BackgroundService
         //}
         _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
 
-        try
+        // 1. Crear un ámbito (scope) desechable para esta transacción
+        using (var scope = _scopeFactory.CreateScope())
         {
-            // Este único llamado activa la estrategia de resiliencia:
-            // 1. Verifica estado de API (fallará por ahora).
-            // 2. Si falla la API, usa LocalDbStorageService (SQLite).
-            // 3. Persiste en SQLite de forma directa.
-            await _storageService.StoreActivityAsync(activity);
+            // 2. Obtener el servicio Scoped (StorageService) dentro de este ámbito
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
 
-            _logger.LogInformation("Actividad del dispositivo {SN} persistida exitosamente (Estrategia Resiliente).", activity.SerialNumber);
+            try
+            {
+                // 3. Usar el servicio Scoped
+                await storageService.StoreActivityAsync(activity);
 
-        }
-        catch (Exception ex)
-        {
-            // Si hay una excepción aquí, significa que falló incluso el almacenamiento local (ej: BD corrupta, permisos).
-            _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}. Revisar la salud de SQLite.", activity.SerialNumber);
-        }
+                _logger.LogInformation("Actividad del dispositivo {SN} persistida exitosamente.", activity.SerialNumber);
+            }
+            catch (Exception ex)
+            {
+                // 4. Si hay error, el log es crítico
+                _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
+            }
+        } // 5. El ámbito y sus servicios Scoped (incluyendo DbContext) se desechan aquí.
     }
 
     /// <inheritdoc/>
@@ -164,12 +171,16 @@ public class Worker : BackgroundService
         _logger.LogInformation("DAM Worker Service is stopping.");
 
         // Registrar evento de parada
-        await _storageService.StoreServiceEventAsync(new ServiceEvent
+        using (var scope = _scopeFactory.CreateScope())
         {
-            Timestamp = DateTime.Now,
-            EventType = "SERVICE_STOP",
-            Message = "El servicio ha finalizado la ejecución."
-        });
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+            await storageService.StoreServiceEventAsync(new ServiceEvent
+            {
+                Timestamp = DateTime.Now,
+                EventType = "SERVICE_STOP",
+                Message = "El servicio ha finalizado la ejecución."
+            });
+        }
 
         // Desuscribir y detener el monitor principal
         _deviceMonitor.DeviceConnected -= HandleDeviceConnected;
