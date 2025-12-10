@@ -111,14 +111,14 @@ graph TD
 
 ### 🚀 Guía de Instalación y Despliegue
 
-#### 1. Clonar el Repositorio
+### 1. Clonar el Repositorio
 
 ```bash
 git clone [https://github.com/potlitel/DeviceActivityMonitor.git](https://github.com/tu-usuario/DeviceActivityMonitor.git)
 cd DeviceActivityMonitor
 ```
 
-#### 2\. Compilar la Solución
+### 2\. Compilar la Solución
 
 ## 
 
@@ -126,7 +126,7 @@ cd DeviceActivityMonitor
 dotnet build
 ```
 
-#### 3\. Despliegue del Servicio de Windows
+### 3\. Despliegue del Servicio de Windows
 
 #### 
 
@@ -135,7 +135,7 @@ Utilice el _script_ de PowerShell para publicar, instalar y configurar la polít
 ##### 🛠️ Instrucciones Detalladas de Uso y Ejecución
 Para un despliegue exitoso, asegúrate de haber configurado las rutas (PROJECT_PATH y DEPLOY_PATH) dentro del archivo Install-Service.cmd antes de comenzar.
 
-#### 3.1\. Opción 1: 🧑‍💻 Ejecución Directa mediante PowerShell (Requiere Sesión Elevada)
+### 3.1\. Opción 1: 🧑‍💻 Ejecución Directa mediante PowerShell (Requiere Sesión Elevada)
 
 ### 
 
@@ -161,7 +161,7 @@ Este método es ideal para desarrolladores o administradores que ya están traba
 
 4.  **Verificar Resultado:** Observa la consola. El script mostrará el progreso animado y, al finalizar, el mensaje de éxito: `✅ Despliegue Completado y Servicio Iniciado Correctamente.`.
 
-#### 3.2\. Opción 2: 🖱️ Ejecución Mediante el Wrapper de Usuario (Recomendado para Usuarios Finales)
+### 3.2\. Opción 2: 🖱️ Ejecución Mediante el Wrapper de Usuario (Recomendado para Usuarios Finales)
 
 ### 
 
@@ -187,7 +187,7 @@ Este método solo requiere un doble clic y maneja la solicitud de permisos de Ad
     
 6.  **Cerrar Consola:** Una vez finalizada la instalación, el archivo `.cmd` te pedirá que presiones una tecla para cerrar la ventana.
 
-#### 🔧 Ejemplo de Configuración de Rutas en `Install-Service.cmd`
+### 🔧 Ejemplo de Configuración de Rutas en `Install-Service.cmd`
 
 ### 
 
@@ -198,7 +198,7 @@ Para este ejemplo, asumiremos los siguientes escenarios comunes:
 2.  **Ruta de Despliegue (`DEPLOY_PATH`):** La carpeta de destino final se encuentra en el directorio estándar de `Archivos de programa`.
     
 
-#### Contenido del Archivo `Install-Service.cmd`
+### Contenido del Archivo `Install-Service.cmd`
 
 ```bash
 @echo off
@@ -240,7 +240,7 @@ if %ERRORLEVEL% NEQ 0 (
 )
 ```
 
-#### 📝 Notas Clave sobre las Rutas
+### 📝 Notas Clave sobre las Rutas
 
 ## 
 
@@ -264,7 +264,7 @@ El _script_ se encargará de:
 -   **▶️ Iniciar** el servicio..
     
 
-#### 4\. Ejecutar la Web API (Inicialmente)
+### 4\. Ejecutar la Web API (Inicialmente)
 
 #### 
 
@@ -293,7 +293,7 @@ El `DeviceActivityWatcher` registra meticulosamente la siguiente información po
     
 -   Eventos especiales (ej: formateo, a ser implementado).
   
-## 🤝 Contribuciones
+### 🤝 Contribuciones
 
 ¡Las contribuciones son bienvenidas! Si deseas ayudar a mejorar este proyecto, puedes hacerlo siguiendo estos pasos:
 
@@ -304,11 +304,11 @@ El `DeviceActivityWatcher` registra meticulosamente la siguiente información po
 
 Por favor, asegúrate de que tu código sigue las buenas prácticas, y si haces mejoras significativas, considera incluir pruebas o documentación adicional.
 
-## 📝 Licencia
+### 📝 Licencia
 
 Este proyecto está bajo la licencia MIT. Consulta el archivo `LICENSE` para más detalles.
 
-## 🙏 Agradecimiento y contacto
+### 🙏 Agradecimiento y contacto
 
 ¡Gracias por visitar y usar este proyecto! ✨  
 Si tienes dudas, sugerencias o quieres contribuir, no dudes en abrir un issue 📥 o contactarme directamente:  
