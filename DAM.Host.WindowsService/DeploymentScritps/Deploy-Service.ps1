@@ -91,11 +91,16 @@ StopAndUninstallService -Name $ServiceName
 Show-Progress -Message "📦 Publicando proyecto .NET (Self-Contained, Single-File)..." -Seconds 5
 # Usamos un bloque try/catch para manejo de errores más claro en PowerShell
 try {
+    # 2>&1 asegura que la salida normal y de error se capturen en $PublishResult
     $PublishResult = & dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -o $DeployPath -p:PublishSingleFile=true 2>&1
     
     if ($LASTEXITCODE -ne 0) {
         Write-Error "La publicación de .NET falló. Revise la salida:"
-        Write-Error $PublishResult
+        
+        # 💡 SOLUCIÓN: Usar el operador -join para convertir el array ($PublishResult)
+        # en una única cadena, donde cada línea está separada por un salto de línea (`n`)
+        $ErrorMessage = $PublishResult -join "`n" 
+        Write-Error $ErrorMessage # <-- Cambiado
         exit 1
     }
 } catch {

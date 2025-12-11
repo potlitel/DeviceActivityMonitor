@@ -4,7 +4,7 @@ REM --- CONFIGURACIÓN DE RUTAS ---
 set "SCRIPT_NAME=Deploy-Service.ps1"
 
 :: RUTA A DONDE ESTÁ EL PROYECTO .NET CORE
-set "PROJECT_PATH=C:\SourceCode\MyService\DAM.Host.WindowsService"
+set "PROJECT_PATH=C:\Users\potli\OneDrive\Documentos\Alexis-Cuba\DeviceActivityMonitor\DAM.Host.WindowsService"
 
 :: RUTA DONDE SE INSTALARÁ EL SERVICIO (Usualmente Program Files)
 set "DEPLOY_PATH=C:\Program Files\DeviceActivityMonitor"
