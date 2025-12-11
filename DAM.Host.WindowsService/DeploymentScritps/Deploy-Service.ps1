@@ -27,44 +27,144 @@ param(
     [string]$ServiceName = "DeviceActivityMonitor"
 )
 
-# --- Funciones Auxiliares ---
+# --- Funciones Auxiliares de Interfaz y Lógica ---
 
-# Función para dibujar una barra de progreso simulada en la consola
-function Show-Progress {
+# Función para dibujar una barra de progreso multi-etapa simulada en la consola
+function Show-MultiStage-Progress {
     param(
-        [string]$Message,
-        # Tiempo en segundos que durará la simulación de progreso
-        [int]$Seconds = 2
+        [string]$MainMessage,
+        [int]$Seconds = 2,
+        [string[]]$Stages # Array de mensajes de sub-etapas
     )
-    $MaxSteps = 20
+    $TotalStages = $Stages.Count
+    $MaxStepsPerStage = 10
+    $TotalSteps = $TotalStages * $MaxStepsPerStage
+    $TotalDelayMs = $Seconds * 1000
+    $DelayPerStepMs = [int]([Math]::Round($TotalDelayMs / $TotalSteps))
+    $CurrentStep = 0
+    # Longitud de la línea de progreso (aproximada para la limpieza)
+    $LineLengthForCleaning = 100 
+
     Write-Host "" # Nueva línea para mejor formato
-    Write-Host "$Message" -ForegroundColor Cyan
+    Write-Host "$MainMessage" -ForegroundColor Cyan
     
-    # Bucle para dibujar la barra
-    for ($i = 1; $i -le $MaxSteps; $i++) {
-        $ProgressBar = "[" + ("=" * $i) + (" " * ($MaxSteps - $i)) + "]"
-        # El caracter `r (retorno de carro) mueve el cursor al inicio de la línea
-        Write-Host "`r$ProgressBar Procesando..." -NoNewline -ForegroundColor Green
-        # Implementa el 'sleep' de .NET Core para simular el progreso
-        Start-Sleep -Milliseconds ([int](($Seconds * 1000) / $MaxSteps))
+    # Bucle principal por cada etapa
+    for ($stageIndex = 0; $stageIndex -lt $TotalStages; $stageIndex++) {
+        $StageMessage = $Stages[$stageIndex]
+        
+        # Bucle interno para el progreso de la barra
+        for ($i = 1; $i -le $MaxStepsPerStage; $i++) {
+            $CurrentStep++
+            $Percentage = [int](($CurrentStep / $TotalSteps) * 100)
+            
+            # Dibujar la barra y el porcentaje
+            $BarLength = [int](($CurrentStep / $TotalSteps) * 20)
+            $ProgressBar = "[" + ("=" * $BarLength) + (" " * (20 - $BarLength)) + "]"
+            
+            # Línea de visualización corregida: se usa ${TotalStages}
+            $OutputText = "`r$ProgressBar $Percentage% | Etapa $($stageIndex + 1)/${TotalStages}: $StageMessage "
+            Write-Host $OutputText -NoNewline -ForegroundColor Green
+            
+            # Pausa para simular la duración del paso
+            Start-Sleep -Milliseconds $DelayPerStepMs
+        }
     }
+    
+    # 💡 CORRECCIÓN VISUAL: Asegurar que el texto final borre el rastro de la última etapa
+    $FinalMessage = "[====================] 100% | Finalizado."
+    
+    # Rellenar con espacios para limpiar el resto de la línea
+    $Padding = " " * ($LineLengthForCleaning - $FinalMessage.Length)
+    
+    Write-Host "`r$FinalMessage$Padding" -NoNewline -ForegroundColor Green
     Write-Host " [OK]" -ForegroundColor Green
+}
+
+# Función para esperar que un servicio sea completamente eliminado por el SCM (Service Control Manager)
+function Wait-ForServiceDeletion {
+    param(
+        [Parameter(Mandatory=$true)]
+        [string]$ServiceName
+    )
+    Write-Host "⏳ Esperando confirmación de liberación del servicio '$ServiceName'..." -ForegroundColor Yellow
+    
+    $timeout = 30 # Tiempo máximo de espera en segundos
+    $interval = 2  # Intervalo de verificación en segundos
+    $startTime = Get-Date
+    
+    do {
+        # Intenta obtener el servicio. Si da error, significa que el servicio ya no existe.
+        try {
+            # El ErrorAction Stop fuerza el salto al bloque catch si el servicio no existe.
+            $service = Get-Service -Name $ServiceName -ErrorAction Stop
+            
+            # Si el servicio existe, escribe el estado y continúa el bucle
+            if ($service) {
+                Write-Host "   El servicio aún está presente. Esperando..." -ForegroundColor DarkGray
+            }
+        }
+        catch {
+            # Si Get-Service lanza una excepción, el servicio fue liberado.
+            Write-Host "✅ Servicio '$ServiceName' completamente liberado del SCM." -ForegroundColor Green
+            return $true
+        }
+        
+        # Verificar el tiempo de espera
+        # Corrección: Uso de TotalSeconds y bloques de comandos {} requeridos.
+        if (((Get-Date) - $startTime).TotalSeconds -ge $timeout) {
+            Write-Error "Fallo crítico: El servicio '$ServiceName' no fue liberado después de $($timeout) segundos."
+            return $false
+        }
+
+        Start-Sleep -Seconds $interval
+    } while ($true)
 }
 
 function StopAndUninstallService {
     param(
         [string]$Name
     )
+    
+    # Verificación de la existencia del servicio
     if (Get-Service -Name $Name -ErrorAction SilentlyContinue) {
-        Show-Progress -Message "⚙️ Deteniendo servicio existente '$Name'..." -Seconds 2
-        Stop-Service -Name $Name -Force -ErrorAction SilentlyContinue
         
-        Show-Progress -Message "🧹 Desinstalando servicio existente '$Name'..." -Seconds 2
-        # Utiliza sc.exe delete para desinstalar
+        Show-MultiStage-Progress -MainMessage "⚙️ Gestionando servicio anterior '$Name'..." -Seconds 4 -Stages @(
+            "Deteniendo el servicio...",
+            "Esperando confirmación de detención...",
+            "Eliminando definición del servicio...",
+            "Esperando liberación de recursos..."
+        )
+
+        # 1. DETENER EL SERVICIO
+        try {
+            # Intentamos detener. Si ya está detenido, el comando fallará, pero continuamos.
+            Stop-Service -Name $Name -Force -ErrorAction SilentlyContinue
+        } catch {}
+
+        # 2. ESPERAR EL ESTADO 'STOPPED' ANTES DE ELIMINAR (Bucle robusto)
+        $stopTimeout = 10 # 10 segundos para detener
+        $stopInterval = 1
+        $stopStartTime = Get-Date
+        
+        do {
+            Start-Sleep -Seconds $stopInterval
+            $service = Get-Service -Name $Name -ErrorAction SilentlyContinue
+            $status = $service.Status
+            
+            # --- CORRECCIÓN DE SINTAXIS ---
+            # Aseguramos el correcto anidamiento y las llaves de la sentencia if
+            if ((((Get-Date) - $stopStartTime).TotalSeconds -ge $stopTimeout)) {
+                Write-Warning "El servicio '$Name' no se detuvo después de $stopTimeout segundos. Forzando eliminación."
+                break # Rompe el bucle e intenta la eliminación de todas formas
+            }
+
+        } until ($status -eq "Stopped" -or $status -eq $null) # $null significa que ya fue eliminado o nunca existió
+
+        # 3. ELIMINAR EL SERVICIO
         & sc.exe delete $Name | Out-Null
-        
-        # Esperar un momento para que el sistema libere los recursos
-        Start-Sleep -Seconds 1
+
+        # 4. ESPERAR LA LIBERACIÓN FINAL DE WINDOWS (Resuelve el 1072)
+        Wait-ForServiceDeletion -ServiceName $ServiceName 
     }
 }
 
@@ -84,23 +184,33 @@ Write-Host "========================================================" -Foregroun
 
 
 # --- 2. Gestión de Servicio Existente ---
-Show-Progress -Message "🔍 Verificando estado del servicio existente..." -Seconds 1
+Show-MultiStage-Progress -MainMessage "🔍 Verificando estado del servicio existente..." -Seconds 1 -Stages @("Buscando servicio...")
 StopAndUninstallService -Name $ServiceName
 
 # --- 3. Publicación del Proyecto .NET Core (Self-Contained) ---
-Show-Progress -Message "📦 Publicando proyecto .NET (Self-Contained, Single-File)..." -Seconds 5
-# Usamos un bloque try/catch para manejo de errores más claro en PowerShell
+
+# Definimos las etapas de publicación para el feedback visual
+$PublishStages = @(
+    "Restaurando dependencias (NuGet)...",
+    "Compilando proyecto en modo Release...",
+    "Empaquetando recursos (Self-Contained)...",
+    "Creando Single-File ejecutable...",
+    "Finalizando y copiando a destino..."
+)
+
+# Simulamos 10 segundos para el paso más largo. Ajusta este tiempo si es necesario.
+Show-MultiStage-Progress -MainMessage "📦 Publicando proyecto .NET (Self-Contained, Single-File)..." -Seconds 10 -Stages $PublishStages
+
 try {
     # 2>&1 asegura que la salida normal y de error se capturen en $PublishResult
     $PublishResult = & dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -o $DeployPath -p:PublishSingleFile=true 2>&1
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "La publicación de .NET falló. Revise la salida:"
+        Write-Error "La publicación de .NET falló. Revise la salida (Exit Code: $LASTEXITCODE):"
         
-        # 💡 SOLUCIÓN: Usar el operador -join para convertir el array ($PublishResult)
-        # en una única cadena, donde cada línea está separada por un salto de línea (`n`)
+        # Solución al error de 'System.Object[]': Forzamos la unión del array a una cadena
         $ErrorMessage = $PublishResult -join "`n" 
-        Write-Error $ErrorMessage # <-- Cambiado
+        Write-Error $ErrorMessage 
         exit 1
     }
 } catch {
@@ -109,8 +219,9 @@ try {
 }
 
 # --- 4. Instalación del Servicio ---
-Show-Progress -Message "💾 Instalando servicio '$ServiceName'..." -Seconds 3
-$InstallResult = & sc.exe create $ServiceName binPath="`"$TargetExecutable`"" start="auto" DisplayName="$ServiceDisplayName" 2>&1
+Show-MultiStage-Progress -MainMessage "💾 Instalando servicio '$ServiceName'..." -Seconds 2 -Stages @("Creando definición de servicio...")
+$InstallResult = & sc.exe create $ServiceName binPath="`"$TargetExecutable`"" start="auto" DisplayName="$ServiceDisplayName" obj= LocalSystem 2>&1
+
 
 if ($LASTEXITCODE -ne 0) {
     Write-Error "La instalación del servicio falló. Resultado: $InstallResult"
@@ -118,7 +229,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- 5. Configuración de Recuperación (Auto-Reinicio Resiliente) ---
-Show-Progress -Message "🛡️ Configurando acciones de recuperación (Auto-Reinicio)..." -Seconds 2
+Show-MultiStage-Progress -MainMessage "🛡️ Configurando acciones de recuperación (Auto-Reinicio)..." -Seconds 2 -Stages @("Aplicando política de reinicio (sc failure)...")
 # reset= 0, actions= restart/1000/restart/1000/restart/1000
 $FailureResult = & sc.exe failure $ServiceName reset= 0 actions= restart/1000/restart/1000/restart/1000 2>&1
 
@@ -127,7 +238,7 @@ if ($LASTEXITCODE -ne 0) {
 }
 
 # --- 6. Inicio del Servicio ---
-Show-Progress -Message "▶️ Iniciando servicio '$ServiceName'..." -Seconds 3
+Show-MultiStage-Progress -MainMessage "▶️ Iniciando servicio '$ServiceName'..." -Seconds 3 -Stages @("Enviando comando Start-Service...")
 Start-Service -Name $ServiceName -ErrorAction Stop
 
 Write-Host ""

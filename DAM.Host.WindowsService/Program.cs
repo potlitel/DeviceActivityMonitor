@@ -1,24 +1,53 @@
-using DAM.Host.WindowsService.Extensions;
+锘縰sing DAM.Host.WindowsService.Extensions;
 
-IHost host = Host.CreateDefaultBuilder(args)
-    // 1. Configuraci髇 espec韋ica para ser un servicio de Windows
-    .UseWindowsService()
-
-    // 2. Configuraci髇 de Servicios usando los m閠odos de extensi髇
-    .ConfigureServices((hostContext, services) =>
+// Definimos la clase Program que contiene el punto de entrada Main
+public class Program
+{
+    public static async Task Main(string[] args)
     {
-        // Persistencia (SQLite y Repositorios)
-        services.AddSqlitePersistence(hostContext.Configuration);
+        // 馃挕 1. AJUSTE CR脥TICO: Forzar el directorio de trabajo
+        // Esto garantiza que el host encuentre appsettings.json, la base de datos SQLite 
+        // y otros archivos en el directorio donde reside el servicio (BaseDirectory),
+        // y no en C:\Windows\System32.
+        System.IO.Directory.SetCurrentDirectory(System.AppDomain.CurrentDomain.BaseDirectory);
 
-        // Integraci髇 (API y Resiliencia)
-        services.AddWebApiIntegration(hostContext.Configuration);
+        // El resto de la construcci贸n del host se mantiene igual
+        IHost host = Host.CreateDefaultBuilder(args)
+            .UseContentRoot(System.AppDomain.CurrentDomain.BaseDirectory)
+            // Usa el m茅todo ConfigureWindowsService() si es el que usas para envolver UseWindowsService(), 
+            // si no, usa el m茅todo directo del framework:
+            .UseWindowsService()
 
-        // L骻ica de Monitoreo y Host (Worker)
-        services.AddDeviceMonitoringHost();
-    })
-    .Build();
+            // 2. Configuraci贸n de Servicios usando los m茅todos de extensi贸n
+            .ConfigureServices((hostContext, services) =>
+            {
+                // Persistencia (SQLite y Repositorios)
+                services.AddSqlitePersistence(hostContext.Configuration);
 
-// 3. Aplicar migraciones antes de iniciar el host
-host.MigrateDatabase();
+                // Integraci贸n (API y Resiliencia)
+                services.AddWebApiIntegration(hostContext.Configuration);
 
-await host.RunAsync();
+                // L贸gica de Monitoreo y Host (Worker)
+                services.AddDeviceMonitoringHost();
+            })
+            .Build();
+
+        // 3. Aplicar migraciones antes de iniciar el host
+        try
+        {
+            host.MigrateDatabase();
+        }
+        catch (Exception ex)
+        {
+            // Opcional: Obtener el logger y registrar el error
+            var logger = host.Services.GetRequiredService<ILogger<Program>>();
+            logger.LogError(ex, "FATAL: La migraci贸n de la base de datos (SQLite) fall贸. El servicio no puede iniciar.");
+
+            // Re-lanzar o terminar elegantemente para evitar que RunAsync falle ciegamente.
+            // En un servicio de Windows, lo mejor es terminar con un c贸digo de error.
+            return;
+        }
+
+        await host.RunAsync();
+    }
+}
