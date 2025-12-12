@@ -216,20 +216,7 @@ namespace DAM.Host.WindowsService.Monitoring
         {
             try
             {
-                var fileInfo = new FileInfo(e.FullPath);
-                if (fileInfo.Exists)
-                {
-                    long fileSizeMB = fileInfo.Length / (1024 * 1024);
-                    _activity.MegabytesCopied += fileSizeMB;
-                    _activity.FilesCopied.Add(e.FullPath);
-
-                    // Actualizar capacidad disponible
-                    var driveInfo = new DriveInfo(_driveLetter);
-                    if (driveInfo.IsReady)
-                    {
-                        _activity.FinalAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
-                    }
-                }
+                UpdateMetadataOnFileCreated(e);
             }
             // 1. Manejo específico para archivos que desaparecen antes de poder leerlos
             catch (FileNotFoundException ex)
@@ -252,20 +239,84 @@ namespace DAM.Host.WindowsService.Monitoring
         }
 
         /// <summary>
+        /// Actualiza los metadatos de la actividad de monitoreo cuando se crea un archivo.
+        /// </summary>
+        /// <remarks>
+        /// Esta función intenta obtener el tamaño del archivo recién creado para sumarlo al total de megabytes copiados.
+        /// Además, actualiza la capacidad libre final de la unidad para el seguimiento posterior de eliminaciones o creaciones.
+        /// Se incluye manejo de excepciones para fallos de I/O al acceder a la información del archivo o de la unidad.
+        /// </remarks>
+        /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo creado.</param>
+        private void UpdateMetadataOnFileCreated(FileSystemEventArgs e)
+        {
+            var fileInfo = new FileInfo(e.FullPath);
+            if (fileInfo.Exists)
+            {
+                long fileSizeMB = fileInfo.Length / (1024 * 1024);
+                _activity.MegabytesCopied += fileSizeMB;
+                _activity.FilesCopied.Add(e.FullPath);
+
+                // Actualizar capacidad disponible
+                try
+                {
+                    var driveInfo = new DriveInfo(_driveLetter);
+                    if (driveInfo.IsReady)
+                    {
+                        _activity.FinalAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
+                    }
+                }
+                catch (IOException ex)
+                {
+                    _logger.LogWarning(ex, "Fallo de E/S al leer la capacidad disponible del Drive {DriveLetter} después de la creación del archivo. Se omite la actualización de FinalAvailableMB.", _driveLetter);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "Error inesperado al intentar acceder a DriveInfo después de la creación. Drive: {DriveLetter}", _driveLetter);
+                }
+            }
+        }
+
+        /// <summary>
         /// Se activa cuando el <see cref="FileSystemWatcher"/> detecta la eliminación de un archivo o carpeta.
         /// Actualiza el contador de <see cref="DeviceActivity.MegabytesDeleted"/>.
         /// </summary>
         private void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            // En el evento 'Deleted', no podemos obtener el tamaño del archivo, 
-            // por lo que nos basamos en el cambio de espacio libre.
             try
             {
-                // Suponemos una eliminación.
-                _activity.FilesDeleted.Add(e.FullPath);
+                UpdateMetadataOnFileDeleted(e);
+            }
+            // Capturamos cualquier excepción de I/O que pueda ocurrir durante la lectura de DriveInfo
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Fallo de I/O al procesar evento de eliminación. Se ignorará el cálculo de espacio: {Path}", e.FullPath);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error inesperado al procesar evento de eliminación de archivo: {Path}", e.FullPath);
+            }
+        }
 
-                // Actualizar capacidad disponible para calcular el espacio borrado/diferencia
+        /// <summary>
+        /// Actualiza los metadatos de la actividad de monitoreo cuando se elimina un archivo.
+        /// </summary>
+        /// <remarks>
+        /// Debido a las limitaciones del evento 'Deleted' de FileSystemWatcher (que no proporciona el tamaño del archivo),
+        /// esta función se basa en el **cambio en el espacio libre disponible** de la unidad para estimar la cantidad de espacio liberado.
+        /// Si el cálculo del espacio libre falla (por ejemplo, si la unidad no está lista o por un error de E/S), solo se registra el archivo eliminado.
+        /// </remarks>
+        /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo eliminado.</param>
+        private void UpdateMetadataOnFileDeleted(FileSystemEventArgs e)
+        {
+            // En el evento 'Deleted', no podemos obtener el tamaño del archivo, 
+            // por lo que nos basamos en el cambio de espacio libre.
+            _activity.FilesDeleted.Add(e.FullPath);
+
+            // Actualizar capacidad disponible para calcular el espacio borrado/diferencia
+            try
+            {
                 var driveInfo = new DriveInfo(_driveLetter);
+
                 if (driveInfo.IsReady)
                 {
                     long newAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
@@ -277,15 +328,19 @@ namespace DAM.Host.WindowsService.Monitoring
                     }
                     _activity.FinalAvailableMB = newAvailableMB;
                 }
+                else
+                {
+                    // Si el disco no está listo, solo registramos el archivo borrado.
+                    _logger.LogWarning("Drive {DriveLetter} no estaba listo durante el evento de eliminación para calcular el espacio libre.", _driveLetter);
+                }
             }
-            // Capturamos cualquier excepción de I/O que pueda ocurrir durante la lectura de DriveInfo
             catch (IOException ex)
             {
-                _logger.LogWarning(ex, "Fallo de I/O al procesar evento de eliminación. Se ignorará el cálculo de espacio: {Path}", e.FullPath);
+                _logger.LogWarning(ex, "Fallo de I/O al acceder a DriveInfo durante la eliminación. Se ignora el cálculo de espacio: {Path}", e.FullPath);
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error inesperado al procesar evento de eliminación de archivo: {Path}", e.FullPath);
+                _logger.LogError(ex, "Error inesperado al intentar acceder a DriveInfo durante la eliminación. Drive: {DriveLetter}", _driveLetter);
             }
         }
 
