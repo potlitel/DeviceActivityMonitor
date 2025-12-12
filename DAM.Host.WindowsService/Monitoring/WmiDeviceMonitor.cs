@@ -50,6 +50,16 @@ namespace DAM.Host.WindowsService.Monitoring
             Dispose();
         }
 
+        /// <summary>
+        /// Maneja el evento WMI que indica la conexión de un nuevo dispositivo de almacenamiento.
+        /// </summary>
+        /// <param name="sender">La fuente del evento (normalmente el observador WMI).</param>
+        /// <param name="e">Argumentos del evento WMI que contienen la información del nuevo dispositivo.</param>
+        /// <remarks>
+        /// Este método extrae la letra de unidad (ej. "E:") del objeto de instancia WMI ('TargetInstance')
+        /// y dispara el evento <see cref="DeviceConnected"/> de la clase principal para notificar
+        /// a los suscriptores.
+        /// </remarks>
         private void OnDeviceConnected(object sender, EventArrivedEventArgs e)
         {
             var instance = (ManagementBaseObject)e.NewEvent["TargetInstance"];
@@ -61,6 +71,16 @@ namespace DAM.Host.WindowsService.Monitoring
             }
         }
 
+        /// <summary>
+        /// Maneja el evento WMI que indica la desconexión de un dispositivo de almacenamiento existente.
+        /// </summary>
+        /// <param name="sender">La fuente del evento (normalmente el observador WMI).</param>
+        /// <param name="e">Argumentos del evento WMI que contienen la información del dispositivo desconectado.</param>
+        /// <remarks>
+        /// Al igual que en <see cref="OnDeviceConnected"/>, este método obtiene la letra de unidad
+        /// y utiliza el evento <see cref="DeviceDisconnected"/> para informar a los componentes 
+        /// que estaban monitoreando esa unidad sobre la retirada.
+        /// </remarks>
         private void OnDeviceDisconnected(object sender, EventArrivedEventArgs e)
         {
             var instance = (ManagementBaseObject)e.NewEvent["TargetInstance"];
