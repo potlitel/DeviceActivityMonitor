@@ -380,11 +380,9 @@ namespace DAM.Host.WindowsService.Monitoring
         /// <summary>
         /// Finaliza la actividad de monitoreo, registra la capacidad final y reporta los datos recolectados.
         /// </summary>
-        /// <param name="finalAvailableMB">La capacidad disponible al momento de la extracción.</param>
-        public void FinalizeActivity(long finalAvailableMB)
+        public void FinalizeActivity()
         {
             _activity.ExtractedAt = DateTime.Now;
-            _activity.FinalAvailableMB = finalAvailableMB;
 
             // Reportar la actividad completada al servicio principal
             ActivityCompleted?.Invoke(_activity);
