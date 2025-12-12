@@ -5,6 +5,7 @@ namespace DAM.Host.WindowsService.Monitoring
 {
     /// <summary>
     /// Objeto autónomo responsable de monitorear todas las operaciones de E/S (lectura/escritura) en un dispositivo conectado.
+    /// También recopila metadatos iniciales del dispositivo (SN, Modelo, etc).
     /// </summary>
     public class DeviceActivityWatcher : IDisposable
     {
@@ -106,8 +107,11 @@ namespace DAM.Host.WindowsService.Monitoring
         // --- Métodos de Recolección de Información ---
 
         /// <summary>
-        /// Obtiene el Número de Serie de un dispositivo físico correlacionado con una letra de unidad lógica.
+        /// Obtiene el Número de Serie de un dispositivo físico correlacionado con una letra de unidad lógica
+        /// usando WMI (Windows Management Instrumentation).
         /// </summary>
+        /// <param name="driveRoot">La raíz del disco (ej: "E:").</param>
+        /// <returns>El número de serie o "UNKNOWN_WMI" si falla.</returns>
         private string GetSerialNumber(string driveRoot)
         {
             // La letra de unidad debe terminar en dos puntos, ej: "E:"
@@ -143,9 +147,12 @@ namespace DAM.Host.WindowsService.Monitoring
             }
             return "UNKNOWN_WMI";
         }
+
         /// <summary>
-        /// Obtiene el Modelo del dispositivo físico asociado a la letra de unidad.
+        /// Obtiene el Modelo del dispositivo físico asociado a la letra de unidad usando WMI.
         /// </summary>
+        /// <param name="driveRoot">La raíz del disco (ej: "E:").</param>
+        /// <returns>El modelo o "UNKNOWN_WMI" si falla.</returns>
         private string GetModel(string driveRoot)
         {
             string driveLetter = driveRoot.TrimEnd('\\');
@@ -177,8 +184,11 @@ namespace DAM.Host.WindowsService.Monitoring
             return "UNKNOWN_WMI";
         }
 
-        // --- Manejo de Errores del Watcher ---
 
+        /// <summary>
+        /// Maneja los errores internos del <see cref="FileSystemWatcher"/> (errores de E/S).
+        /// Intenta registrar el error y recuperar el watcher.
+        /// </summary>
         private void OnWatcherError(object sender, ErrorEventArgs e)
         {
             // Registra errores de E/S del FileSystemWatcher y lo reinicia si es necesario (patrón de recuperación).
@@ -198,7 +208,10 @@ namespace DAM.Host.WindowsService.Monitoring
             }
         }
 
-        // Manejo de Creación de Archivos (COPIA)
+        /// <summary>
+        /// Se activa cuando el <see cref="FileSystemWatcher"/> detecta la creación de un archivo o carpeta.
+        /// Actualiza el contador de <see cref="DeviceActivity.MegabytesCopied"/>.
+        /// </summary>
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
             try
@@ -226,7 +239,10 @@ namespace DAM.Host.WindowsService.Monitoring
             }
         }
 
-        // Manejo de Eliminación de Archivos
+        /// <summary>
+        /// Se activa cuando el <see cref="FileSystemWatcher"/> detecta la eliminación de un archivo o carpeta.
+        /// Actualiza el contador de <see cref="DeviceActivity.MegabytesDeleted"/>.
+        /// </summary>
         private void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
             // En el evento 'Deleted', no podemos obtener el tamaño del archivo, 

@@ -10,6 +10,7 @@ namespace DAM.Host.WindowsService;
 /// </summary>
 /// <remarks>
 /// Hereda de <see cref="BackgroundService"/> para ejecutarse como un servicio de larga duración.
+/// Utiliza <see cref="IServiceScopeFactory"/> para gestionar la persistencia resiliente de manera segura para Singletón/Scoped.
 /// </remarks>
 public class Worker : BackgroundService
 {
@@ -26,9 +27,9 @@ public class Worker : BackgroundService
     /// <summary>
     /// Inicializa una nueva instancia de <see cref="Worker"/>.
     /// </summary>
-    /// <param name="logger">Servicio de logging.</param>
+    /// <param name="logger">Servicio de logging para el Worker.</param>
     /// <param name="deviceMonitor">Monitor de eventos de hardware (WMI).</param>
-    /// <param name="storageService">Servicio resiliente para la persistencia de datos (<see cref="IActivityStorageService"/>).</param>
+    /// <param name="scopeFactory">Factoría para la creación de ámbitos de servicio, permitiendo el uso de servicios Scoped (como DbContext) desde este Singleton.</param>
     public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
     {
         _logger = logger;
@@ -37,7 +38,12 @@ public class Worker : BackgroundService
         _scopeFactory = scopeFactory;
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Método principal que contiene la lógica de ejecución del servicio de larga duración.
+    /// Aquí se inicializan las dependencias, se registra el evento de inicio del servicio, 
+    /// y se inicia el monitoreo WMI para detectar la conexión de dispositivos.
+    /// </summary>
+    /// <inheritdoc path="param[@name='stoppingToken']" />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("DAM Worker Service starting at: {time}", DateTimeOffset.Now);
@@ -71,7 +77,10 @@ public class Worker : BackgroundService
     }
 
     // --- Manejo de Eventos ---
-
+    /// <summary>
+    /// Handler que se activa cuando el <see cref="IDeviceMonitor"/> detecta la conexión de un nuevo dispositivo.
+    /// </summary>
+    /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
     private void HandleDeviceConnected(string driveLetter)
     {
         _logger.LogInformation("Device connected: {DriveLetter}", driveLetter);
@@ -89,6 +98,10 @@ public class Worker : BackgroundService
         }
     }
 
+    /// <summary>
+    /// Handler que se activa cuando el <see cref="IDeviceMonitor"/> detecta la desconexión de un dispositivo.
+    /// </summary>
+    /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
     private void HandleDeviceDisconnected(string driveLetter)
     {
         _logger.LogInformation("Device disconnected: {DriveLetter}", driveLetter);
@@ -167,7 +180,11 @@ public class Worker : BackgroundService
         } // 5. El ámbito y sus servicios Scoped (incluyendo DbContext) se desechan aquí.
     }
 
-    /// <inheritdoc/>
+    /// <summary>
+    /// Se invoca cuando el host realiza un apagado ordenado. 
+    /// Aquí se registra el evento de parada, se detiene el monitoreo WMI y se fuerzan las finalizaciones de los Watchers activos.
+    /// </summary>
+    /// <inheritdoc path="param[@name='stoppingToken']" />
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
         _logger.LogInformation("DAM Worker Service is stopping.");
