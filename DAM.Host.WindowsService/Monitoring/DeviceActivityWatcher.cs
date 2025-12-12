@@ -10,13 +10,13 @@ namespace DAM.Host.WindowsService.Monitoring
     public class DeviceActivityWatcher : IDisposable
     {
         private readonly string _driveLetter; // Ej: "E:"
-        private readonly FileSystemWatcher _watcher;
-        private readonly DeviceActivity _activity;
+        private FileSystemWatcher _watcher = null!;
+        private DeviceActivity _activity = null!;
         private readonly ILogger<DeviceActivityWatcher> _logger;
 
         // Campos privados para la capacidad.
-        private readonly long _initialTotalCapacity;
-        private readonly long _initialAvailableSpace;
+        private long _initialTotalCapacity;
+        private long _initialAvailableSpace;
 
         /// <summary>
         /// Evento disparado cuando el dispositivo se desconecta y se completa la recolección de datos.
@@ -31,12 +31,36 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
         /// <param name="logger">El servicio de logging.</param>
+        /// <remarks>
+        /// Este constructor separa la lógica de inicialización en dos métodos privados:
+        /// <list type="bullet">
+        /// <item>Inicialización de la actividad y metadatos del disco.</item>
+        /// <item>Configuración y suscripción del <see cref="FileSystemWatcher"/>.</item>
+        /// </list>
+        /// </remarks>
         public DeviceActivityWatcher(string driveLetter, ILogger<DeviceActivityWatcher> logger)
         {
             _driveLetter = driveLetter;
+            _logger = logger;
 
-            // --- 1. Recolección de Información de Capacidad y Metadatos ---
+            InitializeDriveMetadata(driveLetter);
+
+            SetupFileSystemWatcher(driveLetter);
+        }
+
+        /// <summary>
+        /// Recolecta la información inicial del disco (<see cref="DriveInfo"/>) e inicializa el objeto <see cref="DeviceActivity"/>.
+        /// </summary>
+        /// <param name="driveLetter">La letra de unidad para la cual se recopilan los metadatos.</param>
+        /// <returns>void</returns>
+        /// <remarks>
+        /// Si el disco no está listo, la actividad se inicializa con valores predeterminados ("UNKNOWN_ERR" o 0)
+        /// y se registra una advertencia.
+        /// </remarks>
+        private void InitializeDriveMetadata(string driveLetter)
+        {
             var driveInfo = new DriveInfo(driveLetter);
+            long mbConversionFactor = 1024 * 1024;
 
             if (driveInfo.IsReady)
             {
@@ -48,10 +72,10 @@ namespace DAM.Host.WindowsService.Monitoring
                 _activity = new DeviceActivity
                 {
                     InsertedAt = DateTime.Now,
-                    // Conversión a MB para el registro (1024 * 1024)
-                    TotalCapacityMB = _initialTotalCapacity / (1024 * 1024),
-                    InitialAvailableMB = _initialAvailableSpace / (1024 * 1024),
-                    FinalAvailableMB = _initialAvailableSpace / (1024 * 1024), // Inicialmente son iguales
+                    // Conversión a MB para el registro
+                    TotalCapacityMB = _initialTotalCapacity / mbConversionFactor,
+                    InitialAvailableMB = _initialAvailableSpace / mbConversionFactor,
+                    FinalAvailableMB = _initialAvailableSpace / mbConversionFactor, // Inicialmente son iguales
 
                     // Metadatos que requerirían WMI real en producción
                     SerialNumber = GetSerialNumber(driveLetter.TrimEnd('\\')),
@@ -60,8 +84,7 @@ namespace DAM.Host.WindowsService.Monitoring
             }
             else
             {
-                // Manejo de caso donde el disco no está listo inmediatamente (ej. fallo de montaje)
-                // Se inicializa con valores predeterminados y se loggea la advertencia.
+                // Manejo de caso donde el disco no está listo.
                 _initialTotalCapacity = 0;
                 _initialAvailableSpace = 0;
 
@@ -75,17 +98,26 @@ namespace DAM.Host.WindowsService.Monitoring
                     FinalAvailableMB = 0
                 };
 
-                logger.LogWarning("Drive {Drive} not ready upon insertion. Activity logging may be incomplete.", driveLetter);
+                _logger.LogWarning("Drive {Drive} not ready upon insertion. Activity logging may be incomplete.", driveLetter);
             }
+        }
 
-            // --- 2. Configuración del FileSystemWatcher ---
+        /// <summary>
+        /// Configura el <see cref="FileSystemWatcher"/> para la unidad especificada y suscribe los manejadores de eventos.
+        /// </summary>
+        /// <param name="driveLetter">La letra de unidad a monitorear.</param>
+        /// <returns>void</returns>
+        /// <exception cref="ArgumentException">Se lanza si la letra de unidad no es válida o no existe al intentar crear el watcher.</exception>
+        private void SetupFileSystemWatcher(string driveLetter)
+        {
             try
             {
                 _watcher = new FileSystemWatcher(driveLetter)
                 {
+                    // Filtros para monitorear creación, eliminación, cambios de nombre y tamaño.
                     NotifyFilter = NotifyFilters.FileName | NotifyFilters.LastWrite | NotifyFilters.Size | NotifyFilters.DirectoryName,
                     IncludeSubdirectories = true,
-                    EnableRaisingEvents = true
+                    EnableRaisingEvents = true // Iniciar el monitoreo inmediatamente
                 };
 
                 // Suscripción a eventos de E/S
@@ -96,12 +128,13 @@ namespace DAM.Host.WindowsService.Monitoring
             }
             catch (ArgumentException ex)
             {
-                // Esto ocurre si la letra de unidad no es válida o ya no existe.
-                _logger.LogError(ex, "Error al crear FileSystemWatcher para la unidad {DriveLetter}.", driveLetter);
-                // Si el watcher no se puede inicializar, el monitoreo de E/S falla, pero el registro básico continúa.
-                _watcher = new FileSystemWatcher(); // Inicializar con dummy para evitar NullReferenceException
+                // Loggear el error si el watcher no puede ser inicializado.
+                _logger.LogError(ex, "Error al crear FileSystemWatcher para la unidad {DriveLetter}. El monitoreo de E/S no estará activo.", driveLetter);
+
+                // Inicializar con dummy para evitar NullReferenceException en el resto de la clase.
+                // FileSystemWatcher sin ruta de monitoreo.
+                _watcher = new FileSystemWatcher();
             }
-            // Otros eventos como Renamed o Changed pueden ser monitoreados para una lógica más fina.
         }
 
         // --- Métodos de Recolección de Información ---
