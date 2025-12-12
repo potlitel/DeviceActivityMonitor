@@ -228,13 +228,25 @@ if ($LASTEXITCODE -ne 0) {
     exit 1
 }
 
+# Definir la descripción fuera de la función principal para facilitar la lectura
+$ServiceDescription = "Servicio de monitoreo en segundo plano para la detección de dispositivos externos y registro de actividad de E/S de almacenamiento USB. Garantiza la persistencia resiliente de datos." 
+
 # --- 5. Configuración de Recuperación (Auto-Reinicio Resiliente) ---
 Show-MultiStage-Progress -MainMessage "🛡️ Configurando acciones de recuperación (Auto-Reinicio)..." -Seconds 2 -Stages @("Aplicando política de reinicio (sc failure)...")
+
+# 5a. Configuración de Recuperación (sc failure)
 # reset= 0, actions= restart/1000/restart/1000/restart/1000
 $FailureResult = & sc.exe failure $ServiceName reset= 0 actions= restart/1000/restart/1000/restart/1000 2>&1
 
 if ($LASTEXITCODE -ne 0) {
     Write-Warning "Fallo al configurar la recuperación automática: $FailureResult"
+}
+
+# 5b. AÑADIR DESCRIPCIÓN DEL SERVICIO
+$DescResult = & sc.exe description $ServiceName "$ServiceDescription" 2>&1
+
+if ($LASTEXITCODE -ne 0) {
+    Write-Warning "Fallo al establecer la descripción del servicio: $DescResult"
 }
 
 # --- 6. Inicio del Servicio ---
