@@ -239,7 +239,28 @@ if ($LASTEXITCODE -ne 0) {
 
 # --- 6. Inicio del Servicio ---
 Show-MultiStage-Progress -MainMessage "▶️ Iniciando servicio '$ServiceName'..." -Seconds 3 -Stages @("Enviando comando Start-Service...")
-Start-Service -Name $ServiceName -ErrorAction Stop
+#Start-Service -Name $ServiceName -ErrorAction Stop
+try {
+    # El parámetro -ErrorAction Stop obliga a PowerShell a lanzar una excepción
+    # que es capturada por el bloque catch si el servicio no puede iniciarse.
+    Start-Service -Name $ServiceName -ErrorAction Stop
+    
+    # Si la línea de arriba tiene éxito, el script termina aquí con mensaje de éxito (al final del script)
+
+} catch {
+    # Captura la ServiceCommandException que indica que el servicio no pudo iniciarse
+    Write-Warning ""
+    Write-Warning "=========================================================="
+    Write-Warning "⚠ ADVERTENCIA CRÍTICA: El servicio NO se pudo iniciar."
+    Write-Warning "   Esto suele deberse a una EXCEPCIÓN en el código C#."
+    Write-Warning "   Revise el Visor de Eventos de Windows (Application Log)."
+    Write-Warning "   Error de PowerShell: $($_.Exception.Message)"
+    Write-Warning "=========================================================="
+    
+    # Aunque no se pudo iniciar, permitimos que el script termine (no usamos exit 1) 
+    # ya que la instalación y publicación sí fueron exitosas.
+}
+
 
 Write-Host ""
 Write-Host "--------------------------------------------------------" -ForegroundColor Green

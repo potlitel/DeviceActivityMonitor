@@ -180,7 +180,7 @@ public class Worker : BackgroundService
             {
                 Timestamp = DateTime.Now,
                 EventType = "SERVICE_STOP",
-                Message = "El servicio ha finalizado la ejecución."
+                Message = "El servicio Device Activity Monitor ha finalizado la ejecución."
             });
         }
 
