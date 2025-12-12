@@ -231,12 +231,24 @@ namespace DAM.Host.WindowsService.Monitoring
                     }
                 }
             }
+            // 1. Manejo específico para archivos que desaparecen antes de poder leerlos
+            catch (FileNotFoundException ex)
+            {
+                _logger.LogWarning(ex, "El archivo fue creado pero ya no existe en el momento del acceso I/O. Se ignora la actividad: {Path}", e.FullPath);
+            }
+            // 2. Manejo para errores de acceso o I/O que impiden obtener FileInfo
+            catch (IOException ex)
+            {
+                // Esto puede ocurrir si el archivo está siendo usado por otro proceso (bloqueo)
+                _logger.LogWarning(ex, "Fallo de I/O al acceder al archivo creado. Se ignorará esta actividad: {Path}", e.FullPath);
+            }
+            // 3. Manejo de cualquier otra excepción inesperada
             catch (Exception ex)
             {
-                // Manejo robusto de I/O (Fallos en el Watcher)
-                // Se debe loggear y potencialmente reiniciar el Watcher si el fallo es crítico.
-                _logger.LogWarning(ex, "Fallo al procesar evento de creación de archivo: {Path}", e.FullPath);
+                _logger.LogError(ex, "Error inesperado al procesar evento de creación de archivo: {Path}", e.FullPath);
             }
+            // IMPORTANTE: Si ocurre un fallo, el objeto _activity CONSERVA todos los datos acumulados
+            // hasta este punto, y el watcher continúa monitoreando eventos futuros.
         }
 
         /// <summary>
@@ -266,10 +278,14 @@ namespace DAM.Host.WindowsService.Monitoring
                     _activity.FinalAvailableMB = newAvailableMB;
                 }
             }
+            // Capturamos cualquier excepción de I/O que pueda ocurrir durante la lectura de DriveInfo
+            catch (IOException ex)
+            {
+                _logger.LogWarning(ex, "Fallo de I/O al procesar evento de eliminación. Se ignorará el cálculo de espacio: {Path}", e.FullPath);
+            }
             catch (Exception ex)
             {
-                // Manejo robusto de I/O
-                _logger.LogWarning(ex, "Fallo al procesar evento de eliminación de archivo.");
+                _logger.LogError(ex, "Error inesperado al procesar evento de eliminación de archivo: {Path}", e.FullPath);
             }
         }
 
