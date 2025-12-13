@@ -2,6 +2,19 @@
 
 ## Monitoreo Resiliente de Dispositivos Externos para Entornos Empresariales
 
+<!-- [![Build Status](https://github.com/potlitel/DeviceActivityMonitor/actions/workflows/dotnet-build.yml/badge.svg)](https://github.com/potlitel/DeviceActivityMonitor/actions/workflows/dotnet-build.yml)
+[![Tests](https://img.shields.io/github/actions/workflow/status/potlitel/DeviceActivityMonitor/dotnet-test.yml?label=Tests)](https://github.com/potlitel/DeviceActivityMonitor/actions/workflows/dotnet-test.yml) -->
+[![Latest Release](https://img.shields.io/github/v/release/potlitel/DeviceActivityMonitor?sort=semver)](https://github.com/potlitel/DeviceActivityMonitor/releases)
+[![License](https://img.shields.io/github/license/potlitel/DeviceActivityMonitor)](LICENSE)
+
+[![.NET](https://img.shields.io/badge/.NET-8-blue.svg?style=flat&logo=dotnet)](https://dotnet.microsoft.com/)
+[![C#](https://img.shields.io/badge/C%23-10%2B-512BD4.svg?style=flat&logo=c-sharp)](https://docs.microsoft.com/en-us/dotnet/csharp/)
+[![Blazor](https://img.shields.io/badge/Blazor-Web%20App-512BD4.svg?style=flat&logo=blazor)]()
+[![OS: Windows](https://img.shields.io/badge/OS-Windows-0078D4.svg?style=flat&logo=windows)]()
+[![Pattern: CQRS](https://img.shields.io/badge/Pattern-CQRS-orange.svg)]()
+[![Resilience](https://img.shields.io/badge/Resilience-SQLite%2FAPI-yellow.svg)]()
+[![Pull Requests Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](https://github.com/potlitel/DeviceActivityMonitor/pulls)
+
 ---
 
 ### 🌟 Introducción
