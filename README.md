@@ -128,74 +128,69 @@ dotnet build
 
 ### 3\. Despliegue del Servicio de Windows
 
-#### 
+El despliegue ha sido refactorizado para utilizar un **Paquete de Distribución (ZIP de Publicación)**, lo que simplifica la instalación para el usuario final a un único paso.
 
-Utilice el _script_ de PowerShell para publicar, instalar y configurar la política de recuperación.
+### 📦 Flujo de Despliegue y Distribución
 
-##### 🛠️ Instrucciones Detalladas de Uso y Ejecución
-Para un despliegue exitoso, asegúrate de haber configurado las rutas (PROJECT_PATH y DEPLOY_PATH) dentro del archivo Install-Service.cmd antes de comenzar.
+El proceso se divide en dos fases:
+1.  **Generación del Paquete (Lado del Desarrollador):** Utilizando el script de empaquetado.
+2.  **Instalación (Lado del Usuario Final/Administrador):** Utilizando el paquete generado.
 
-### 3.1\. Opción 1: 🧑‍💻 Ejecución Directa mediante PowerShell (Requiere Sesión Elevada)
+---
 
-### 
+### 3.1. ⚙️ Fase 1: Generación del Paquete de Distribución (Para Desarrolladores)
 
-Este método es ideal para desarrolladores o administradores que ya están trabajando dentro de una consola con privilegios elevados.
+El script `Create-Release.ps1` automatiza la publicación del proyecto .NET, copia el script de despliegue necesario y empaqueta todo en un único archivo ZIP listo para ser distribuido.
 
-#### **Pasos:**
+#### **Instrucciones para Generar el ZIP:**
 
-### 
-
-1.  **Abrir PowerShell como Administrador:** Haz clic derecho en el icono de PowerShell y selecciona **"Ejecutar como administrador"** (o busca PowerShell, haz clic derecho y selecciona la opción).
-    
-2.  **Navegar al Directorio:** Usa el comando `cd` para ir a la carpeta donde guardaste `Deploy-Service.ps1`. _Ejemplo:_
+1.  **Ubicación:** Asegúrate de que `Create-Release.ps1` se encuentre en el **directorio raíz de la solución**.
+2.  **Ejecución:** Abre PowerShell en esa ubicación y ejecuta el script:
 
     ```powershell
-    cd C:\Ruta\De\Los\Scripts
+    .\Create-Release.ps1
     ```
 
-3.  **Ejecutar el Script con Parámetros:** Lanza el script proporcionando explícitamente las rutas del proyecto y de despliegue.
+3.  **Resultado:** El script creará una carpeta llamada `Releases` en la raíz de la solución, y dentro, el archivo ZIP con la nomenclatura:
+    `[NombreProyecto]-Release-[FechaHora].zip`
+
+    Debes obtener una salida similar a la siguiente:
 
     ```powershell
-    .\Deploy-Service.ps1 -ProjectPath "C:\Ruta\Al\Proyecto\DAM.Host.WindowsService" -DeployPath "C:\Program Files\DeviceActivityMonitor"
+    .\Create-Release.ps1
+    1. Publicando proyecto 'DAM.Host.WindowsService'...
+    Restore complete (1.7s)                                                                                                                                                 
+        DAM.Core net10.0 succeeded (0.3s) → DAM.Core\bin\Release\net10.0\DAM.Core.dll
+        DAM.Infrastructure net10.0 succeeded (0.4s) → DAM.Infrastructure\bin\Release\net10.0\DAM.Infrastructure.dll 
+        DAM.Host.WindowsService net10.0 win-x64 succeeded (1.6s) → bin\Release\PublishTemp\  
+    Build succeeded in 5.3s                   
+    2. Copiando script de despliegue ajustado...
+    3. Generando archivo de notas de release...
+    4. Creando paquete de despliegue ZIP...
+    5. Aplicando política de retención (manteniendo los últimos 5 releases)...
+       -> Número de releases menor o igual al límite. No se requiere limpieza.
+
+    ✅ ¡Paquete de Despliegue Listo!
+    Ruta del paquete: C:\Users\potli\OneDrive\Documentos\Alexis-Cuba\DeviceActivityMonitor\Releases\DAM.Host.WindowsService-Release-20251213-103545.zip
+    Instrucción para el usuario: Descomprima el ZIP y ejecute 'Install-Service.ps1' como Administrador.
     ```
 
-4.  **Verificar Resultado:** Observa la consola. El script mostrará el progreso animado y, al finalizar, el mensaje de éxito: `✅ Despliegue Completado y Servicio Iniciado Correctamente.`.
+---
 
-### 3.2\. Opción 2: 🖱️ Ejecución Mediante el Wrapper de Usuario (Recomendado para Usuarios Finales)
+### 3.2. 🛠️ Fase 2: Instalación del Servicio (Para Usuarios Finales/Administradores)
 
-### 
+Una vez que se tiene el paquete ZIP, la instalación es sencilla y directa.
 
-Este método solo requiere un doble clic y maneja la solicitud de permisos de Administrador automáticamente (a través del UAC).
+#### **Instrucciones Detalladas:**
 
-#### **Pasos:**
+1.  **Descomprimir el Paquete:** Descomprime el archivo ZIP de publicación en la ubicación de tu preferencia (ej. `C:\Instalacion\`).
+2.  **Ejecutar el Instalador:** Dentro de la carpeta descomprimida, localiza el script renombrado `Install-Service.ps1`.
+3.  **Ejecutar como Administrador:** Haz clic derecho en `Install-Service.ps1` y selecciona **"Ejecutar con PowerShell"**.
 
-### 
+    > ⚠️ **Nota:** Aparecerá la ventana del **Control de Cuentas de Usuario (UAC)**. Debes hacer clic en **"Sí"** para permitir que el script se ejecute con permisos elevados.
 
-1.  **Verificar Archivos:** Asegúrate de que los archivos `Deploy-Service.ps1` y `Install-Service.cmd` estén en **la misma carpeta**.
-    
-2.  **Configurar Rutas (Solo la primera vez):**
-    
-    -   Abre el archivo **`Install-Service.cmd`** con un editor de texto (como Notepad++ o VS Code).
-        
-    -   Ajusta las variables `PROJECT_PATH` y `DEPLOY_PATH` para que apunten a las ubicaciones correctas.
-        
-3.  **Ejecución:** Haz doble clic sobre el archivo **`Install-Service.cmd`**.
-    
-4.  **Aceptar UAC:** Aparecerá la ventana de **Control de Cuentas de Usuario (UAC)** de Windows. Debes hacer clic en **"Sí"** para permitir que el script se ejecute con permisos de Administrador.
-    
-5.  **Monitorear Progreso:** Una nueva ventana de PowerShell se abrirá y ejecutará el despliegue, mostrando las barras de progreso animadas para cada paso.
-    
-6.  **Cerrar Consola:** Una vez finalizada la instalación, el archivo `.cmd` te pedirá que presiones una tecla para cerrar la ventana.
-
-### 🔧 Ejemplo de Configuración de Rutas en `Install-Service.cmd`
-
-### 
-
-Para este ejemplo, asumiremos los siguientes escenarios comunes:
-
-1.  **Ruta del Proyecto (`PROJECT_PATH`):** El código fuente compilado reside dentro de una carpeta de la solución de Visual Studio, listo para ser publicado.
-    
-2.  **Ruta de Despliegue (`DEPLOY_PATH`):** La carpeta de destino final se encuentra en el directorio estándar de `Archivos de programa`.
+4.  **Monitorear y Finalizar:** El script se ejecutará, publicará el servicio de Windows y lo iniciará automáticamente, mostrando el mensaje de éxito:
+    `✅ ¡Despliegue Completado y Servicio Iniciado Correctamente!`
     
 
 ### Contenido del Archivo `Install-Service.cmd`
