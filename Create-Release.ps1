@@ -81,3 +81,18 @@ Write-Host ""
 Write-Host "✅ ¡Paquete de Despliegue Listo!" -ForegroundColor Cyan
 Write-Host "Ruta del paquete: $ZipPath" -ForegroundColor Cyan
 Write-Host "Instrucción para el usuario: Descomprima el ZIP y ejecute 'Install-Service.ps1' como Administrador." -ForegroundColor Yellow
+
+# --- Abrir Carpeta de Releases ---
+
+# Le informamos al usuario cómo puede abrir la carpeta:
+Write-Host "Para abrir la carpeta de Releases ahora mismo, presione [A] y luego Enter, o cualquier otra tecla para omitir." -ForegroundColor Yellow
+
+# Capturamos la entrada del usuario:
+$UserInput = Read-Host
+
+# Comprobamos si el usuario presionó 'A' o 'a'
+if ($UserInput -ceq "a") {
+    Write-Host "Abriendo carpeta: $ReleaseDir" -ForegroundColor DarkGray
+    # Usamos Invoke-Item (alias 'ii') para abrir la carpeta en el Explorador de Windows
+    Invoke-Item $ReleaseDir
+}
