@@ -53,6 +53,7 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
       - [](#-3)
     - [📋 Métricas Recolectadas](#-métricas-recolectadas)
       - [](#-4)
+  - [Documentación Técnica](#documentación-técnica)
     - [🤝 Contribuciones](#-contribuciones)
     - [📝 Licencia](#-licencia)
     - [🙏 Agradecimiento y contacto](#-agradecimiento-y-contacto)
@@ -337,6 +338,11 @@ El `DeviceActivityWatcher` registra meticulosamente la siguiente información po
     
 -   Eventos especiales (ej: formateo, a ser implementado).
   
+
+## Documentación Técnica
+
+* [**Estrategia de Pruebas**](./DAM.Tests.Monitoring/README_TESTS.md)
+
 ### 🤝 Contribuciones
 
 ¡Las contribuciones son bienvenidas! Si deseas ayudar a mejorar este proyecto, puedes hacerlo siguiendo estos pasos:

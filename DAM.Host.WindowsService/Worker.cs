@@ -153,6 +153,7 @@ public class Worker : BackgroundService
 
             try
             {
+                //activity.TimeInserted = activityEnd - activityStart // O (ExtractedAt ?? DateTime.Now) - InsertedAt
                 // 3. Usar el servicio Scoped
                 await storageService.StoreActivityAsync(activity);
 
