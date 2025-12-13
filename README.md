@@ -10,6 +10,42 @@
 
 El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, borrado, capacidad) de un dispositivo externo, incluso ante la indisponibilidad de la Web API central de almacenamiento.
 
+---
+
+## 🧭 Tabla de Contenido
+
+- [🛡️ Device Activity Monitor (DAM)](#️-device-activity-monitor-dam)
+  - [Monitoreo Resiliente de Dispositivos Externos para Entornos Empresariales](#monitoreo-resiliente-de-dispositivos-externos-para-entornos-empresariales)
+    - [🌟 Introducción](#-introducción)
+  - [🧭 Tabla de Contenido](#-tabla-de-contenido)
+    - [🏛️ Arquitectura de la Solución](#️-arquitectura-de-la-solución)
+    - [🌊 Diagrama de Flujo y Relación de Monitoreo](#-diagrama-de-flujo-y-relación-de-monitoreo)
+    - [⚙️ Características Técnicas](#️-características-técnicas)
+    - [🔧 Prerequisitos](#-prerequisitos)
+    - [🚀 Guía de Instalación y Despliegue](#-guía-de-instalación-y-despliegue)
+    - [1. Clonar el Repositorio](#1-clonar-el-repositorio)
+    - [2. Compilar la Solución](#2-compilar-la-solución)
+  - [](#)
+    - [3. Despliegue del Servicio de Windows](#3-despliegue-del-servicio-de-windows)
+    - [📦 Flujo de Despliegue y Distribución](#-flujo-de-despliegue-y-distribución)
+    - [3.1. ⚙️ Fase 1: Generación del Paquete de Distribución (Para Desarrolladores)](#31-️-fase-1-generación-del-paquete-de-distribución-para-desarrolladores)
+      - [**Instrucciones para Generar el ZIP:**](#instrucciones-para-generar-el-zip)
+    - [3.2. 🛠️ Fase 2: Instalación del Servicio (Para Usuarios Finales/Administradores)](#32-️-fase-2-instalación-del-servicio-para-usuarios-finalesadministradores)
+      - [**Instrucciones Detalladas:**](#instrucciones-detalladas)
+    - [Contenido del Archivo `Install-Service.cmd`](#contenido-del-archivo-install-servicecmd)
+    - [📝 Notas Clave sobre las Rutas](#-notas-clave-sobre-las-rutas)
+  - [](#-1)
+    - [](#-2)
+    - [4. Ejecutar la Web API (Inicialmente)](#4-ejecutar-la-web-api-inicialmente)
+      - [](#-3)
+    - [📋 Métricas Recolectadas](#-métricas-recolectadas)
+      - [](#-4)
+    - [🤝 Contribuciones](#-contribuciones)
+    - [📝 Licencia](#-licencia)
+    - [🙏 Agradecimiento y contacto](#-agradecimiento-y-contacto)
+
+---
+
 ### 🏛️ Arquitectura de la Solución
 
 La solución se divide en tres proyectos principales con una capa de infraestructura y otra de dominio compartido:
