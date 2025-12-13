@@ -18,14 +18,13 @@
 #>
 [CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)]
-    [string]$ProjectPath,
+    # La carpeta de despliegue será la ubicación actual del script
+    # [string]$DeployPath, <-- Se elimina
     
-    [Parameter(Mandatory=$true)]
-    [string]$DeployPath,
-    
-    [string]$ServiceName = "DeviceActivityMonitor"
+    [string]$ServiceName = "DeviceActivityMonitor" # Ahora es el único parámetro
 )
+# Forzar la ruta de trabajo al directorio donde se encuentra el script
+$DeployPath = Split-Path -Parent $PSCommandPath
 
 # --- Funciones Auxiliares de Interfaz y Lógica ---
 
@@ -186,37 +185,6 @@ Write-Host "========================================================" -Foregroun
 # --- 2. Gestión de Servicio Existente ---
 Show-MultiStage-Progress -MainMessage "🔍 Verificando estado del servicio existente..." -Seconds 1 -Stages @("Buscando servicio...")
 StopAndUninstallService -Name $ServiceName
-
-# --- 3. Publicación del Proyecto .NET Core (Self-Contained) ---
-
-# Definimos las etapas de publicación para el feedback visual
-$PublishStages = @(
-    "Restaurando dependencias (NuGet)...",
-    "Compilando proyecto en modo Release...",
-    "Empaquetando recursos (Self-Contained)...",
-    "Creando Single-File ejecutable...",
-    "Finalizando y copiando a destino..."
-)
-
-# Simulamos 10 segundos para el paso más largo. Ajusta este tiempo si es necesario.
-Show-MultiStage-Progress -MainMessage "📦 Publicando proyecto .NET (Self-Contained, Single-File)..." -Seconds 10 -Stages $PublishStages
-
-try {
-    # 2>&1 asegura que la salida normal y de error se capturen en $PublishResult
-    $PublishResult = & dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -o $DeployPath -p:PublishSingleFile=true 2>&1
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "La publicación de .NET falló. Revise la salida (Exit Code: $LASTEXITCODE):"
-        
-        # Solución al error de 'System.Object[]': Forzamos la unión del array a una cadena
-        $ErrorMessage = $PublishResult -join "`n" 
-        Write-Error $ErrorMessage 
-        exit 1
-    }
-} catch {
-    Write-Error "Error grave al ejecutar 'dotnet publish': $($_.Exception.Message)"
-    exit 1
-}
 
 # --- 4. Instalación del Servicio ---
 Show-MultiStage-Progress -MainMessage "💾 Instalando servicio '$ServiceName'..." -Seconds 2 -Stages @("Creando definición de servicio...")
