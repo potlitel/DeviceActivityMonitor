@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Entities;
+using DAM.Host.WindowsService.Monitoring.Interfaces;
 using System.Management;
 
 namespace DAM.Host.WindowsService.Monitoring
@@ -7,7 +8,7 @@ namespace DAM.Host.WindowsService.Monitoring
     /// Objeto autónomo responsable de monitorear todas las operaciones de E/S (lectura/escritura) en un dispositivo conectado.
     /// También recopila metadatos iniciales del dispositivo (SN, Modelo, etc).
     /// </summary>
-    public class DeviceActivityWatcher : IDisposable
+    public class DeviceActivityWatcher : IDeviceActivityWatcher
     {
         private readonly string _driveLetter; // Ej: "E:"
         private FileSystemWatcher _watcher = null!;
@@ -396,5 +397,10 @@ namespace DAM.Host.WindowsService.Monitoring
             _watcher.Dispose();
             GC.SuppressFinalize(this);
         }
+
+        //public void StartMonitoring()
+        //{
+        //    throw new NotImplementedException();
+        //}
     }
 }

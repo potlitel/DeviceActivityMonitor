@@ -1,6 +1,7 @@
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using DAM.Host.WindowsService.Monitoring;
+using DAM.Host.WindowsService.Monitoring.Interfaces;
 using System.Collections.Concurrent;
 
 namespace DAM.Host.WindowsService;
@@ -19,6 +20,8 @@ public class Worker : BackgroundService
     private readonly ILoggerFactory _loggerFactory;
     //private readonly IActivityStorageService _storageService;
     private readonly IServiceScopeFactory _scopeFactory;
+    private readonly IDeviceActivityWatcherFactory _watcherFactory;
+
     /// <summary>
     /// Colección concurrente para mantener un <see cref="DeviceActivityWatcher"/> activo por cada dispositivo conectado.
     /// </summary>
@@ -30,12 +33,14 @@ public class Worker : BackgroundService
     /// <param name="logger">Servicio de logging para el Worker.</param>
     /// <param name="deviceMonitor">Monitor de eventos de hardware (WMI).</param>
     /// <param name="scopeFactory">Factoría para la creación de ámbitos de servicio, permitiendo el uso de servicios Scoped (como DbContext) desde este Singleton.</param>
-    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, IServiceScopeFactory scopeFactory)
+    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, 
+                  IServiceScopeFactory scopeFactory, IDeviceActivityWatcherFactory watcherFactory)
     {
         _logger = logger;
         _deviceMonitor = deviceMonitor;
         _loggerFactory = loggerFactory;
         _scopeFactory = scopeFactory;
+        _watcherFactory = watcherFactory;
     }
 
     /// <summary>
@@ -88,10 +93,11 @@ public class Worker : BackgroundService
         // Aseguramos que solo haya un watcher por unidad
         if (!_activeWatchers.ContainsKey(driveLetter))
         {
-            // Crear e inicializar un nuevo Watcher
-            var watcher = new DeviceActivityWatcher(driveLetter, _loggerFactory.CreateLogger<DeviceActivityWatcher>());
+            var watcherLogger = _loggerFactory.CreateLogger<DeviceActivityWatcher>();
+            var watcher = _watcherFactory.Create(driveLetter, watcherLogger);
+
             watcher.ActivityCompleted += HandleActivityCompleted;
-            _activeWatchers.TryAdd(driveLetter, watcher);
+            _activeWatchers.TryAdd(driveLetter, (DeviceActivityWatcher)watcher);
 
             // Total de dispositivos conectados
             _logger.LogInformation("Total connected devices: {Count}", _activeWatchers.Count);

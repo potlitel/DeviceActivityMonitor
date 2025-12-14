@@ -1,5 +1,6 @@
 ﻿using DAM.Core.Interfaces;
 using DAM.Host.WindowsService.Monitoring;
+using DAM.Host.WindowsService.Monitoring.Interfaces;
 using DAM.Infrastructure.Persistence;
 using DAM.Infrastructure.Storage;
 using DAM.Infrastructure.Utils;
@@ -71,7 +72,8 @@ namespace DAM.Host.WindowsService.Extensions
         {
             // El monitor de eventos de hardware (WMI)
             services.AddSingleton<IDeviceMonitor, WmiDeviceMonitor>();
-
+            // Registramos la Factoría, ya que el Worker la usa para CREAR el Watcher
+            services.AddSingleton<IDeviceActivityWatcherFactory, DeviceActivityWatcherFactory>();
             // El servicio principal de Windows que hereda de BackgroundService
             services.AddHostedService<Worker>();
 
