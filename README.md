@@ -38,7 +38,6 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
     - [🚀 Guía de Instalación y Despliegue](#-guía-de-instalación-y-despliegue)
     - [1. Clonar el Repositorio](#1-clonar-el-repositorio)
     - [2. Compilar la Solución](#2-compilar-la-solución)
-  - [](#)
     - [3. Despliegue del Servicio de Windows](#3-despliegue-del-servicio-de-windows)
     - [📦 Flujo de Despliegue y Distribución](#-flujo-de-despliegue-y-distribución)
     - [3.1. ⚙️ Fase 1: Generación del Paquete de Distribución (Para Desarrolladores)](#31-️-fase-1-generación-del-paquete-de-distribución-para-desarrolladores)
@@ -46,14 +45,11 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
     - [3.2. 🛠️ Fase 2: Instalación del Servicio (Para Usuarios Finales/Administradores)](#32-️-fase-2-instalación-del-servicio-para-usuarios-finalesadministradores)
       - [**Instrucciones Detalladas:**](#instrucciones-detalladas)
     - [Contenido del Archivo `Install-Service.cmd`](#contenido-del-archivo-install-servicecmd)
-    - [📝 Notas Clave sobre las Rutas](#-notas-clave-sobre-las-rutas)
-  - [](#-1)
-    - [](#-2)
     - [4. Ejecutar la Web API (Inicialmente)](#4-ejecutar-la-web-api-inicialmente)
-      - [](#-3)
     - [📋 Métricas Recolectadas](#-métricas-recolectadas)
-      - [](#-4)
-  - [Documentación Técnica](#documentación-técnica)
+  - [📚 Recursos y Documentación Especializada](#-recursos-y-documentación-especializada)
+    - [🧪 Validación del Código (Testing)](#-validación-del-código-testing)
+  - [](#)
     - [🤝 Contribuciones](#-contribuciones)
     - [📝 Licencia](#-licencia)
     - [🙏 Agradecimiento y contacto](#-agradecimiento-y-contacto)
@@ -170,8 +166,6 @@ cd DeviceActivityMonitor
 
 ### 2\. Compilar la Solución
 
-## 
-
 ```Bash
 dotnet build
 ```
@@ -283,35 +277,9 @@ if %ERRORLEVEL% NEQ 0 (
     echo ✅ Despliegue solicitado. Verifique la nueva ventana de PowerShell para el resultado.
     pause > nul
 )
-```
-
-### 📝 Notas Clave sobre las Rutas
-
-## 
-
-| **Variable** | **Descripción** | **Importancia** |
-| --- | --- | --- |
-| **`PROJECT_PATH`** | Debe apuntar al **directorio que contiene el archivo `.csproj`** (p. ej., `DAM.Host.WindowsService.csproj`). El comando `dotnet publish` usará esta ruta como punto de partida para compilar. | **Crítico** para que `dotnet publish` funcione. |
-| **`DEPLOY_PATH`** | Es la carpeta final donde deseas que el ejecutable (`DAM.Host.WindowsService.exe`) y sus dependencias (si no es `PublishSingleFile`) sean copiados. **El servicio de Windows se instalará desde esta ruta.** | **Crítico** para la instalación y ejecución del servicio. |
-
-### 
-
-El _script_ se encargará de:
-
--   **🚫 Detener y eliminar** cualquier instancia anterior.
-    
--   **📦 Publicar** la aplicación como _self-contained_ (autónoma).
-    
--   **💾 Instalar** el servicio de Windows (`sc.exe`).
-    
--   **🛡️ Configurar** la política de recuperación (reinicios automáticos).
-    
--   **▶️ Iniciar** el servicio..
-    
+```    
 
 ### 4\. Ejecutar la Web API (Inicialmente)
-
-#### 
 
 Para probar el mecanismo resiliente, es recomendable iniciar la API:
 
@@ -321,8 +289,6 @@ dotnet run
 ```
 
 ### 📋 Métricas Recolectadas
-
-#### 
 
 El `DeviceActivityWatcher` registra meticulosamente la siguiente información por sesión de conexión:
 
@@ -339,9 +305,25 @@ El `DeviceActivityWatcher` registra meticulosamente la siguiente información po
 -   Eventos especiales (ej: formateo, a ser implementado).
   
 
-## Documentación Técnica
+<!-- ## Documentación Técnica
 
-* [**Estrategia de Pruebas**](./DAM.Tests.Monitoring/README_TESTS.md)
+* [**Estrategia de Pruebas**](./DAM.Tests.Monitoring/README_TESTS.md) -->
+
+## 📚 Recursos y Documentación Especializada
+
+Esta sección contiene enlaces directos a la documentación detallada y a los manuales técnicos esenciales para comprender a fondo el proyecto.
+
+* * *
+
+### 🧪 Validación del Código (Testing)
+
+## 
+
+Profundiza en cómo garantizamos la calidad y la fiabilidad de nuestro código.
+
+| **Documento** | **🎯 Enfoque Principal** | **Enlace Rápido** |
+| --- | --- | --- |
+| **Estrategia de Pruebas** | Cobertura de la lógica de negocio, integración con EF Core, y flujo End-to-End (E2E) del `Worker Service`. | **[Ir a la Documentación Completa](./DAM.Tests.Monitoring/README_TESTS.md)** |
 
 ### 🤝 Contribuciones
 
