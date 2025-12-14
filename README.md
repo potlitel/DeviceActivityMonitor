@@ -31,7 +31,8 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
   - [Monitoreo Resiliente de Dispositivos Externos para Entornos Empresariales](#monitoreo-resiliente-de-dispositivos-externos-para-entornos-empresariales)
     - [🌟 Introducción](#-introducción)
   - [🧭 Tabla de Contenido](#-tabla-de-contenido)
-    - [🏛️ Arquitectura de la Solución](#️-arquitectura-de-la-solución)
+    - [🏛️ Arquitectura de la Solución (DAM)](#️-arquitectura-de-la-solución-dam)
+      - [La solución se estructura en capas bien definidas, siguiendo principios de diseño limpio. Esto facilita la **separación de responsabilidades**, el **mantenimiento**, y por supuesto, el **testing** del sistema.](#la-solución-se-estructura-en-capas-bien-definidas-siguiendo-principios-de-diseño-limpio-esto-facilita-la-separación-de-responsabilidades-el-mantenimiento-y-por-supuesto-el-testing-del-sistema)
     - [🌊 Diagrama de Flujo y Relación de Monitoreo](#-diagrama-de-flujo-y-relación-de-monitoreo)
     - [⚙️ Características Técnicas](#️-características-técnicas)
     - [🔧 Prerequisitos](#-prerequisitos)
@@ -49,24 +50,24 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
     - [📋 Métricas Recolectadas](#-métricas-recolectadas)
   - [📚 Recursos y Documentación Especializada](#-recursos-y-documentación-especializada)
     - [🧪 Validación del Código (Testing)](#-validación-del-código-testing)
-  - [](#)
     - [🤝 Contribuciones](#-contribuciones)
     - [📝 Licencia](#-licencia)
     - [🙏 Agradecimiento y contacto](#-agradecimiento-y-contacto)
 
 ---
 
-### 🏛️ Arquitectura de la Solución
+### 🏛️ Arquitectura de la Solución (DAM)
 
-La solución se divide en tres proyectos principales con una capa de infraestructura y otra de dominio compartido:
+#### La solución se estructura en capas bien definidas, siguiendo principios de diseño limpio. Esto facilita la **separación de responsabilidades**, el **mantenimiento**, y por supuesto, el **testing** del sistema.
 
-| Proyecto | Tipo | Responsabilidad | Tecnologías Clave |
-| :--- | :--- | :--- | :--- |
+| **Proyecto** | **Tipo** | **🎯 Responsabilidad Principal** | **Tecnologías Clave** |
+| --- | --- | --- | --- |
 | `DAM.Host.WindowsService` | **Host/Worker** | Recolección de datos, monitoreo de eventos de hardware (WMI) y persistencia resiliente. | `BackgroundService`, WMI, Patrón Watcher. |
 | `DAM.Presentation.WebAPI` | **Web API** | Punto de entrada para la persistencia remota de datos (API) y exposición de datos de monitoreo. | ASP.NET Core, EF Core. |
 | `DAM.Presentation.BlazorApp` | **Frontend** | Interfaz de usuario para visualizar en tiempo real el estado y el historial de actividad de los dispositivos. | Blazor Web App (Interactive/SSR). |
 | `DAM.Infrastructure` | **Infraestructura** | Implementación de EF Core (SQLite), Repositorios y la Lógica de Resiliencia (API vs. BD local). | EF Core, `HttpClient`. |
 | `DAM.Core` | **Dominio** | Definiciones de entidades, DTOs e interfaces de contratos (SOLID - DIP). | C#, Interfaces. |
+| **`DAM.Tests.Monitoring`** | **Pruebas Automatizadas** | **Verificación** de la lógica de negocio, integración con datos y simulación del flujo completo del servicio `Worker`. | **XUnit**, Moq, EF Core In-Memory. |
 
 ### 🌊 Diagrama de Flujo y Relación de Monitoreo
 
@@ -316,8 +317,6 @@ Esta sección contiene enlaces directos a la documentación detallada y a los ma
 * * *
 
 ### 🧪 Validación del Código (Testing)
-
-## 
 
 Profundiza en cómo garantizamos la calidad y la fiabilidad de nuestro código.
 
