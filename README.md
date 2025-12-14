@@ -32,7 +32,6 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
     - [🌟 Introducción](#-introducción)
   - [🧭 Tabla de Contenido](#-tabla-de-contenido)
     - [🏛️ Arquitectura de la Solución (DAM)](#️-arquitectura-de-la-solución-dam)
-      - [La solución se estructura en capas bien definidas, siguiendo principios de diseño limpio. Esto facilita la **separación de responsabilidades**, el **mantenimiento**, y por supuesto, el **testing** del sistema.](#la-solución-se-estructura-en-capas-bien-definidas-siguiendo-principios-de-diseño-limpio-esto-facilita-la-separación-de-responsabilidades-el-mantenimiento-y-por-supuesto-el-testing-del-sistema)
     - [🌊 Diagrama de Flujo y Relación de Monitoreo](#-diagrama-de-flujo-y-relación-de-monitoreo)
     - [⚙️ Características Técnicas](#️-características-técnicas)
     - [🔧 Prerequisitos](#-prerequisitos)
@@ -42,9 +41,9 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
     - [3. Despliegue del Servicio de Windows](#3-despliegue-del-servicio-de-windows)
     - [📦 Flujo de Despliegue y Distribución](#-flujo-de-despliegue-y-distribución)
     - [3.1. ⚙️ Fase 1: Generación del Paquete de Distribución (Para Desarrolladores)](#31-️-fase-1-generación-del-paquete-de-distribución-para-desarrolladores)
-      - [**Instrucciones para Generar el ZIP:**](#instrucciones-para-generar-el-zip)
+      - [**Instrucciones para Generar el ZIP**](#instrucciones-para-generar-el-zip)
     - [3.2. 🛠️ Fase 2: Instalación del Servicio (Para Usuarios Finales/Administradores)](#32-️-fase-2-instalación-del-servicio-para-usuarios-finalesadministradores)
-      - [**Instrucciones Detalladas:**](#instrucciones-detalladas)
+      - [**Instrucciones Detalladas**](#instrucciones-detalladas)
     - [Contenido del Archivo `Install-Service.cmd`](#contenido-del-archivo-install-servicecmd)
     - [4. Ejecutar la Web API (Inicialmente)](#4-ejecutar-la-web-api-inicialmente)
     - [📋 Métricas Recolectadas](#-métricas-recolectadas)
@@ -58,7 +57,7 @@ El objetivo principal es capturar toda la actividad de E/S de ficheros (copia, b
 
 ### 🏛️ Arquitectura de la Solución (DAM)
 
-#### La solución se estructura en capas bien definidas, siguiendo principios de diseño limpio. Esto facilita la **separación de responsabilidades**, el **mantenimiento**, y por supuesto, el **testing** del sistema.
+La solución se estructura en capas bien definidas, siguiendo principios de diseño limpio. Esto facilita la **separación de responsabilidades**, el **mantenimiento**, y por supuesto, el **testing** del sistema.
 
 | **Proyecto** | **Tipo** | **🎯 Responsabilidad Principal** | **Tecnologías Clave** |
 | --- | --- | --- | --- |
@@ -187,7 +186,7 @@ El proceso se divide en dos fases:
 
 El script `Create-Release.ps1` automatiza la publicación del proyecto .NET, copia el script de despliegue necesario y empaqueta todo en un único archivo ZIP listo para ser distribuido.
 
-#### **Instrucciones para Generar el ZIP:**
+#### **Instrucciones para Generar el ZIP**
 
 1.  **Ubicación:** Asegúrate de que `Create-Release.ps1` se encuentre en el **directorio raíz de la solución**.
 2.  **Ejecución:** Abre PowerShell en esa ubicación y ejecuta el script:
@@ -226,7 +225,7 @@ El script `Create-Release.ps1` automatiza la publicación del proyecto .NET, cop
 
 Una vez que se tiene el paquete ZIP, la instalación es sencilla y directa.
 
-#### **Instrucciones Detalladas:**
+#### **Instrucciones Detalladas**
 
 1.  **Descomprimir el Paquete:** Descomprime el archivo ZIP de publicación en la ubicación de tu preferencia (ej. `C:\Instalacion\`).
 2.  **Ejecutar el Instalador:** Dentro de la carpeta descomprimida, localiza el script renombrado `Install-Service.ps1`.
