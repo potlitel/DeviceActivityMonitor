@@ -18,7 +18,7 @@
         // Métricas de la Sesión
         public long MegabytesCopied { get; set; }
         public long MegabytesDeleted { get; set; }
-        public TimeSpan TimeInserted => (ExtractedAt ?? DateTime.Now) - InsertedAt;
+        public TimeSpan TimeInserted => (ExtractedAt ?? DateTime.UtcNow) - InsertedAt;
 
         // Historial de Archivos
         public List<string> FilesCopied { get; set; } = new List<string>();

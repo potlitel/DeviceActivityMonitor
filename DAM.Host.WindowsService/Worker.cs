@@ -132,23 +132,6 @@ public class Worker : BackgroundService
     /// <param name="activity">Los datos finales de actividad.</param>
     private async void HandleActivityCompleted(DeviceActivity activity)
     {
-        //_logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
-
-        //// **AQUÍ VA LA LÓGICA DE PERSISTENCIA (BD o API)**
-        //// Este mecanismo lo implementaremos en la siguiente fase.
-
-        //// Ejemplo de métricas:
-        //// long diff = activity.InitialAvailableMB - activity.FinalAvailableMB;
-        //// _logger.LogInformation("Diff MB: {Diff}", diff); 
-        //// Persistir la actividad usando el servicio resiliente (API o BD Local)
-        //try
-        //{
-        //    await _storageService.StoreActivityAsync(activity);
-        //}
-        //catch (Exception ex)
-        //{
-        //    _logger.LogError(ex, "Fallo crítico al persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
-        //}
         _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
 
         // 1. Crear un ámbito (scope) desechable para esta transacción
