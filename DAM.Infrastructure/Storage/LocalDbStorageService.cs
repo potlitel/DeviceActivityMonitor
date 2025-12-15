@@ -32,6 +32,12 @@ namespace DAM.Infrastructure.Storage
         }
 
         /// <inheritdoc/>
+        public Task StoreInvoiceAsync(Invoice invoice)
+        {
+            return _repository.AddInvoiceAsync(invoice);
+        }
+
+        /// <inheritdoc/>
         public Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             return _repository.AddServiceEventAsync(serviceEvent);

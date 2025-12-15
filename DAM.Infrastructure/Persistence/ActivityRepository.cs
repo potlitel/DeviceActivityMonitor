@@ -58,6 +58,21 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
+        public async Task AddInvoiceAsync(Invoice invoice)
+        {
+            try
+            {
+                _context.Invoices.Add(invoice);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al guardar Invoice en la BD.");
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task AddServiceEventAsync(ServiceEvent serviceEvent)
         {
             try

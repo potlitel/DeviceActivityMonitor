@@ -43,6 +43,14 @@ namespace DAM.Infrastructure.Storage
         }
 
         /// <inheritdoc/>
+        public async Task StoreInvoiceAsync(Invoice invoice)
+        {
+            // Endpoint POST para guardar facturas
+            var response = await _httpClient.PostAsJsonAsync("api/invoices", invoice);
+            response.EnsureSuccessStatusCode();
+        }
+
+        /// <inheritdoc/>
         public async Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             // Endpoint POST para guardar eventos del servicio

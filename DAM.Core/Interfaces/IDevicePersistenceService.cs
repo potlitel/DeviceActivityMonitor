@@ -24,5 +24,11 @@ namespace DAM.Core.Interfaces
         /// Se utiliza para auditar el ciclo de vida del servicio principal.
         /// </summary>
         Task PersistServiceEventAsync(ServiceEvent serviceEvent);
+
+        /// <summary>
+        /// Calcula una factura basándose en la actividad inicial y la persiste en la base de datos.
+        /// Esta operación es asíncrona, transaccional y utiliza el IInvoiceCalculator inyectado.
+        /// </summary>
+        Task PersistInvoiceAsync(DeviceActivity activity);
     }
 }

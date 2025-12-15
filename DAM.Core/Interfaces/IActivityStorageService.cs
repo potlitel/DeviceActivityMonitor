@@ -30,5 +30,12 @@ namespace DAM.Core.Interfaces
         /// <param name="presence">El historial de presencia a almacenar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task StoreDevicePresenceAsync(DevicePresence presence);
+
+        /// <summary>
+        /// Almacena una factura de operación de copiado de un dispositivo, decidiendo la estrategia de persistencia (Local/Remoto).
+        /// </summary>
+        /// <param name="invoice">La factura a almacenar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
+        Task StoreInvoiceAsync(Invoice invoice);
     }
 }

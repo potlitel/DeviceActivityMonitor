@@ -11,12 +11,15 @@ namespace DAM.Infrastructure.Persistence
     public class DevicePersistenceService : IDevicePersistenceService
     {
         private readonly IServiceScopeFactory _scopeFactory;
+        private readonly IInvoiceCalculator _invoiceCalculator;
         private readonly ILogger<DevicePersistenceService> _logger;
 
-        public DevicePersistenceService(IServiceScopeFactory scopeFactory, ILogger<DevicePersistenceService> logger)
+        public DevicePersistenceService(IServiceScopeFactory scopeFactory, ILogger<DevicePersistenceService> logger, 
+                                        IInvoiceCalculator invoiceCalculator)
         {
             _scopeFactory = scopeFactory;
             _logger = logger;
+            _invoiceCalculator = invoiceCalculator;
         }
 
         /// <inheritdoc/>
@@ -87,6 +90,33 @@ namespace DAM.Infrastructure.Persistence
                     // Se registra un error si la persistencia del evento falla.
                     _logger.LogError(ex, "FALLO al persistir el evento de servicio '{EventType}'.", serviceEvent.EventType);
                     // NOTA: No re-lanzamos la excepción ya que el evento debe continuar su flujo.
+                }
+            }
+        }
+
+        /// <inheritdoc/>
+        public async Task PersistInvoiceAsync(DeviceActivity activity)
+        {
+            // 1. Calcular la factura usando el IInvoiceCalculator inyectado
+            var invoice = _invoiceCalculator.CalculateInvoice(activity);
+
+            // 2. Crear un ámbito (scope) para la transacción de persistencia
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                // 3. Obtener el servicio de almacenamiento Scoped (que tiene el DbContext)
+                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+                try
+                {
+                    // 4. Persistir la factura.
+                    await storageService.StoreInvoiceAsync(invoice);
+
+                    _logger.LogInformation("Factura de {Monto:C} calculada y persistida para {SN}.",
+                                           invoice.TotalAmount, invoice.SerialNumber);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError(ex, "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.", invoice.SerialNumber);
                 }
             }
         }

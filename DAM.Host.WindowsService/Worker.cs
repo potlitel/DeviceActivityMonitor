@@ -93,7 +93,23 @@ public class Worker : BackgroundService
 
             Task.Run(async () =>
             {
-                await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
+                try
+                {
+                    // 2. REGISTRAR PRESENCIA (Llama al método que usa scope y persiste)
+                    await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
+
+                    // 3. CALCULAR Y PERSISTIR FACTURA (Llama al método que calcula la factura
+                    // con IInvoiceCalculator y la persiste en un scope aislado)
+                    await _devicePersistenceService.PersistInvoiceAsync(watcher.CurrentActivity);
+
+                    _logger.LogInformation("Presencia y Factura inicial procesadas para {SN}.", watcher.CurrentActivity.SerialNumber);
+                }
+                catch (Exception ex)
+                {
+                    // Nota: El servicio de persistencia ya debería haber logeado los errores específicos,
+                    // pero es buena práctica logear el fallo del orquestador.
+                    _logger.LogError(ex, "FALLO: Error al orquestar la persistencia de conexión para {SN}.", watcher.CurrentActivity.SerialNumber);
+                }
             });
 
             watcher.ActivityCompleted += HandleActivityCompleted;

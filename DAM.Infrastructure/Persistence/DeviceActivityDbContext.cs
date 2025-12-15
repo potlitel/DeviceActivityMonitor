@@ -25,6 +25,11 @@ namespace DAM.Infrastructure.Persistence
         public DbSet<DevicePresence> DevicePresences { get; set; } = null!;
 
         /// <summary>
+        /// Conjunto de datos (tabla) para las facturas de los dispositivos.
+        /// </summary>
+        public DbSet<Invoice> Invoices { get; set; } = null!;
+
+        /// <summary>
         /// Inicializa una nueva instancia de <see cref="DeviceActivityDbContext"/>.
         /// </summary>
         /// <param name="options">Opciones de configuración del contexto (usualmente para la cadena de conexión).</param>
