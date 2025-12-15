@@ -43,6 +43,21 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
+        public async Task AddDevicePresenceAsync(DevicePresence presence)
+        {
+            try
+            {
+                _context.DevicePresences.Add(presence);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error al guardar ServiceEvent en la BD.");
+                throw;
+            }
+        }
+
+        /// <inheritdoc/>
         public async Task AddServiceEventAsync(ServiceEvent serviceEvent)
         {
             try

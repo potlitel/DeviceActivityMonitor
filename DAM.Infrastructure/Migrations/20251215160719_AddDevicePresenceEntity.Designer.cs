@@ -3,6 +3,7 @@ using System;
 using DAM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAM.Infrastructure.Migrations
 {
     [DbContext(typeof(DeviceActivityDbContext))]
-    partial class DeviceActivityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20251215160719_AddDevicePresenceEntity")]
+    partial class AddDevicePresenceEntity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");

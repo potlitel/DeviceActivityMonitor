@@ -23,6 +23,14 @@ namespace DAM.Core.Interfaces
         /// <param name="serviceEvent">El objeto ServiceEvent a guardar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task AddServiceEventAsync(ServiceEvent serviceEvent);
+
+        /// <summary>
+        /// Agrega un historial de presencia de dispositivo a la persistencia.
+        /// </summary>
+        /// <param name="presence">El objeto DevicePresence a guardar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
+        Task AddDevicePresenceAsync(DevicePresence presence);
+
         // ... otros métodos de consulta ...
     }
 }
