@@ -21,6 +21,7 @@ La siguiente tabla detalla las migraciones generadas y el comando exacto de `.NE
 | --- | --- | --- | --- |
 | \[07/12/2025\] | **InitialCreate** | `dotnet ef migrations add InitialCreate --project DAM.Infrastructure/DAM.Infrastructure.csproj --startup-project DAM.Host.WindowsService/DAM.Host.WindowsService.csproj` | Creación inicial del esquema de la base de datos. |
 | \[15/12/2025\] | **AddTimeInsertedToPersistOnDB** | `dotnet ef migrations add AddTimeInsertedToPersistOnDB --project DAM.Infrastructure/DAM.Infrastructure.csproj --startup-project DAM.Host.WindowsService/DAM.Host.WindowsService.csproj` | Añade una columna para registrar el tiempo de inserción en una tabla específica. |
+| \[15/12/2025\] | **AddDevicePresenceEntity** | `dotnet ef migrations add AddDevicePresenceEntity --project DAM.Infrastructure/DAM.Infrastructure.csproj --startup-project DAM.Host.WindowsService/DAM.Host.WindowsService.csproj` | Añade entidad para registrar el historial de presencia de dispositivos. |
 
 ## 🔄 Comando de Aplicación (Update)
 
