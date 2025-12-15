@@ -1,5 +1,8 @@
 ﻿namespace DAM.Core.Entities
 {
+    /// <summary>
+    /// Entidad para registrar el historial de presencia de los dispositivos externos.
+    /// </summary>
     public class DevicePresence
     {
         public int Id { get; set; }

@@ -81,5 +81,12 @@ namespace DAM.Infrastructure.Storage
             var strategy = await GetCurrentStorageStrategy();
             await strategy.StoreServiceEventAsync(serviceEvent);
         }
+
+        /// <inheritdoc/>
+        public async Task StoreDevicePresenceAsync(DevicePresence presence)
+        {
+            var strategy = await GetCurrentStorageStrategy();
+            await strategy.StoreDevicePresenceAsync(presence);
+        }
     }
 }

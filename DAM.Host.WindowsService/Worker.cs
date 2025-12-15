@@ -21,6 +21,7 @@ public class Worker : BackgroundService
     //private readonly IActivityStorageService _storageService;
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IDeviceActivityWatcherFactory _watcherFactory;
+    private readonly IDevicePersistenceService _devicePersistenceService;
 
     /// <summary>
     /// Colección concurrente para mantener un <see cref="DeviceActivityWatcher"/> activo por cada dispositivo conectado.
@@ -33,14 +34,16 @@ public class Worker : BackgroundService
     /// <param name="logger">Servicio de logging para el Worker.</param>
     /// <param name="deviceMonitor">Monitor de eventos de hardware (WMI).</param>
     /// <param name="scopeFactory">Factoría para la creación de ámbitos de servicio, permitiendo el uso de servicios Scoped (como DbContext) desde este Singleton.</param>
-    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory, 
-                  IServiceScopeFactory scopeFactory, IDeviceActivityWatcherFactory watcherFactory)
+    public Worker(ILogger<Worker> logger, IDeviceMonitor deviceMonitor, ILoggerFactory loggerFactory,
+                  IServiceScopeFactory scopeFactory, IDeviceActivityWatcherFactory watcherFactory, 
+                  IDevicePersistenceService devicePersistenceService)
     {
         _logger = logger;
         _deviceMonitor = deviceMonitor;
         _loggerFactory = loggerFactory;
         _scopeFactory = scopeFactory;
         _watcherFactory = watcherFactory;
+        _devicePersistenceService = devicePersistenceService;
     }
 
     /// <summary>
@@ -96,6 +99,11 @@ public class Worker : BackgroundService
             var watcherLogger = _loggerFactory.CreateLogger<DeviceActivityWatcher>();
             var watcher = _watcherFactory.Create(driveLetter, watcherLogger);
 
+            Task.Run(async () =>
+            {
+                await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
+            });
+
             watcher.ActivityCompleted += HandleActivityCompleted;
             _activeWatchers.TryAdd(driveLetter, (DeviceActivityWatcher)watcher);
 
@@ -134,26 +142,7 @@ public class Worker : BackgroundService
     {
         _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
 
-        // 1. Crear un ámbito (scope) desechable para esta transacción
-        using (var scope = _scopeFactory.CreateScope())
-        {
-            // 2. Obtener el servicio Scoped (StorageService) dentro de este ámbito
-            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
-
-            try
-            {
-                //activity.TimeInserted = activityEnd - activityStart // O (ExtractedAt ?? DateTime.Now) - InsertedAt
-                // 3. Usar el servicio Scoped
-                await storageService.StoreActivityAsync(activity);
-
-                _logger.LogInformation("Actividad del dispositivo {SN} persistida exitosamente.", activity.SerialNumber);
-            }
-            catch (Exception ex)
-            {
-                // 4. Si hay error, el log es crítico
-                _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
-            }
-        } // 5. El ámbito y sus servicios Scoped (incluyendo DbContext) se desechan aquí.
+        await _devicePersistenceService.PersistActivityAsync(activity);
     }
 
     /// <summary>

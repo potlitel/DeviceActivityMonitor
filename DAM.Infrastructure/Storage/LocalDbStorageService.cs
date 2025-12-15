@@ -26,6 +26,12 @@ namespace DAM.Infrastructure.Storage
         }
 
         /// <inheritdoc/>
+        public Task StoreDevicePresenceAsync(DevicePresence presence)
+        {
+            return _repository.AddDevicePresenceAsync(presence);
+        }
+
+        /// <inheritdoc/>
         public Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             return _repository.AddServiceEventAsync(serviceEvent);

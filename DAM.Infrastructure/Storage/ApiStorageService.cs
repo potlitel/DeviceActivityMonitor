@@ -35,6 +35,14 @@ namespace DAM.Infrastructure.Storage
         }
 
         /// <inheritdoc/>
+        public async Task StoreDevicePresenceAsync(DevicePresence presence)
+        {
+            // Endpoint POST para guardar historial de presencia
+            var response = await _httpClient.PostAsJsonAsync("api/devicepresence", presence);
+            response.EnsureSuccessStatusCode();
+        }
+
+        /// <inheritdoc/>
         public async Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
             // Endpoint POST para guardar eventos del servicio

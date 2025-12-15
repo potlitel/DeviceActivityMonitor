@@ -23,5 +23,12 @@ namespace DAM.Core.Interfaces
         /// <param name="serviceEvent">El evento del servicio a almacenar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task StoreServiceEventAsync(ServiceEvent serviceEvent);
+
+        /// <summary>
+        /// Almacena un historial de presencia del dispositivo, decidiendo la estrategia de persistencia (Local/Remoto).
+        /// </summary>
+        /// <param name="presence">El historial de presencia a almacenar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
+        Task StoreDevicePresenceAsync(DevicePresence presence);
     }
 }

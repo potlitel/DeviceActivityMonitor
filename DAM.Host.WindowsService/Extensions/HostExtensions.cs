@@ -29,6 +29,7 @@ namespace DAM.Host.WindowsService.Extensions
 
             // Se registra la capa de repositorio y la lógica de almacenamiento local.
             services.AddScoped<IActivityRepository, ActivityRepository>();
+            services.AddSingleton<IDevicePersistenceService, DevicePersistenceService>();
             services.AddScoped<LocalDbStorageService>();
 
             return services;
