@@ -25,6 +25,10 @@ namespace DAM.Host.WindowsService.Monitoring
         public event Action<DeviceActivity>? ActivityCompleted;
 
         public string DriveLetter => _driveLetter;
+
+        /// <summary>
+        /// Obtiene la actividad recopilada actualmente. Usada para pruebas y diagnóstico.
+        /// </summary>
         public DeviceActivity CurrentActivity => _activity;
 
         /// <summary>
@@ -397,10 +401,5 @@ namespace DAM.Host.WindowsService.Monitoring
             _watcher.Dispose();
             GC.SuppressFinalize(this);
         }
-
-        //public void StartMonitoring()
-        //{
-        //    throw new NotImplementedException();
-        //}
     }
 }
