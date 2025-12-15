@@ -33,6 +33,14 @@ namespace DAM.Infrastructure.Persistence
             // Configuración de DeviceActivity
             modelBuilder.Entity<DeviceActivity>(entity =>
             {
+                entity.Property(e => e.TimeInserted)
+                      .UsePropertyAccessMode(PropertyAccessMode.PreferField)
+                      .HasColumnName("TimeInserted")
+                      .HasColumnType("time(7)")
+                      .IsRequired(false); 
+
+                entity.Ignore(e => e.CalculatedDuration);
+
                 entity.HasKey(e => e.Id);
                 entity.Property(e => e.SerialNumber).IsRequired().HasMaxLength(50);
                 entity.Property(e => e.FilesCopied).HasConversion(

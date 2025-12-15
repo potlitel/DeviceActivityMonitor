@@ -389,6 +389,8 @@ namespace DAM.Host.WindowsService.Monitoring
         {
             _activity.ExtractedAt = DateTime.Now;
 
+            _activity.SetTimeInsertedDuration();
+
             // Reportar la actividad completada al servicio principal
             ActivityCompleted?.Invoke(_activity);
         }

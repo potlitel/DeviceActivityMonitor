@@ -18,7 +18,10 @@
         // Métricas de la Sesión
         public long MegabytesCopied { get; set; }
         public long MegabytesDeleted { get; set; }
-        public TimeSpan TimeInserted => (ExtractedAt ?? DateTime.UtcNow) - InsertedAt;
+
+        public TimeSpan? TimeInserted { get; private set; }
+
+        public TimeSpan CalculatedDuration => (ExtractedAt ?? DateTime.UtcNow) - InsertedAt;
 
         // Historial de Archivos
         public List<string> FilesCopied { get; set; } = new List<string>();
@@ -29,5 +32,16 @@
 
         // Historial de Presencia (para saber los días que ha venido anteriormente)
         // Esto se manejaría como una query aparte o en la misma tabla con un Distinct en la fecha.
+
+        /// <summary>
+        /// Método para establecer el valor del campo privado '_timeInserted' al finalizar
+        /// </summary>
+        public void SetTimeInsertedDuration()
+        {
+            if (ExtractedAt.HasValue)
+            {
+                TimeInserted = CalculatedDuration;
+            }
+        }
     }
 }

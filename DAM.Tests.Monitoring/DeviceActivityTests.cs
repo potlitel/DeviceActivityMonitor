@@ -37,12 +37,12 @@ namespace DAM.Tests.Monitoring
             };
 
             // Act
-            var timeInserted = activity.TimeInserted;
+            var calculatedDuration = activity.CalculatedDuration;
 
             // Assert: Aumentamos la tolerancia, buscando un intervalo de 4 a 6 minutos.
             // Esto es mucho más seguro para el entorno de pruebas.
-            Assert.True(timeInserted.TotalMinutes > 4.0 && timeInserted.TotalMinutes < 6.0,
-                $"Tiempo calculado: {timeInserted.TotalMinutes:F2} min. Esperado entre 4.0 y 6.0 min.");
+            Assert.True(calculatedDuration.TotalMinutes > 4.0 && calculatedDuration.TotalMinutes < 6.0,
+                $"Tiempo calculado: {calculatedDuration.TotalMinutes:F2} min. Esperado entre 4.0 y 6.0 min.");
         }
     }
 }
