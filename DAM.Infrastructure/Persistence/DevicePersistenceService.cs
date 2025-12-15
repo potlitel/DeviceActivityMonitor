@@ -19,6 +19,7 @@ namespace DAM.Infrastructure.Persistence
             _logger = logger;
         }
 
+        /// <inheritdoc/>
         public async Task PersistPresenceAsync(string serialNumber)
         {
             // La lógica de creación de scope y acceso a repositorios va AQUÍ.
@@ -43,6 +44,7 @@ namespace DAM.Infrastructure.Persistence
             }
         }
 
+        /// <inheritdoc/>
         public async Task PersistActivityAsync(DeviceActivity activity)
         {
             // La lógica de creación de scope y acceso a repositorios va AQUÍ.
@@ -63,6 +65,30 @@ namespace DAM.Infrastructure.Persistence
                     _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
                 }
             } // El ámbito se desecha aquí.
+        }
+
+        /// <inheritdoc/>
+        public async Task PersistServiceEventAsync(ServiceEvent serviceEvent)
+        {
+            using (var scope = _scopeFactory.CreateScope())
+            {
+                // Se obtiene el servicio de almacenamiento Scoped dentro del ámbito.
+                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+                try
+                {
+                    // Registra el evento de servicio (START/STOP)
+                    await storageService.StoreServiceEventAsync(serviceEvent);
+
+                    _logger.LogInformation("Evento de servicio '{EventType}' persistido correctamente.", serviceEvent.EventType);
+                }
+                catch (Exception ex)
+                {
+                    // Se registra un error si la persistencia del evento falla.
+                    _logger.LogError(ex, "FALLO al persistir el evento de servicio '{EventType}'.", serviceEvent.EventType);
+                    // NOTA: No re-lanzamos la excepción ya que el evento debe continuar su flujo.
+                }
+            }
         }
     }
 }

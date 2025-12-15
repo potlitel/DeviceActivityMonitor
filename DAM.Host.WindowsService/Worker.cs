@@ -57,16 +57,12 @@ public class Worker : BackgroundService
         _logger.LogInformation("DAM Worker Service starting at: {time}", DateTimeOffset.Now);
 
         // 1. Registrar evento de inicio en la base de datos (Persistencia de Eventos)
-        using (var scope = _scopeFactory.CreateScope())
+        await _devicePersistenceService.PersistServiceEventAsync(new ServiceEvent
         {
-            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
-            await storageService.StoreServiceEventAsync(new ServiceEvent
-            {
-                Timestamp = DateTime.Now,
-                EventType = "SERVICE_START",
-                Message = "El servicio Device Activity Monitor ha iniciado la ejecución."
-            });
-        }
+            Timestamp = DateTime.Now,
+            EventType = "SERVICE_START",
+            Message = "El servicio Device Activity Monitor ha iniciado la ejecución."
+        });
 
         // 2. Configurar y arrancar el monitoreo WMI
         // Suscribirse a eventos de conexión/desconexión
@@ -76,10 +72,6 @@ public class Worker : BackgroundService
 
         _logger.LogInformation("Device Monitoring Started.");
 
-        // Este servicio solo es un host, la lógica de trabajo está en los handlers.
-        // No necesita un bucle de trabajo (while(!stoppingToken.IsCancellationRequested)) 
-        // a menos que necesite tareas de mantenimiento periódicas.
-        //return Task.CompletedTask;
         // El Worker se mantiene en ejecución hasta que se solicita la detención.
         await Task.Delay(Timeout.Infinite, stoppingToken);
     }
@@ -154,17 +146,13 @@ public class Worker : BackgroundService
     {
         _logger.LogInformation("DAM Worker Service is stopping.");
 
-        // Registrar evento de parada
-        using (var scope = _scopeFactory.CreateScope())
+        // Registrar evento de parada delegado al servicio de persistencia.
+        await _devicePersistenceService.PersistServiceEventAsync(new ServiceEvent
         {
-            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
-            await storageService.StoreServiceEventAsync(new ServiceEvent
-            {
-                Timestamp = DateTime.Now,
-                EventType = "SERVICE_STOP",
-                Message = "El servicio Device Activity Monitor ha finalizado la ejecución."
-            });
-        }
+            Timestamp = DateTime.Now,
+            EventType = "SERVICE_STOP",
+            Message = "El servicio Device Activity Monitor ha finalizado la ejecución."
+        });
 
         // Desuscribir y detener el monitor principal
         _deviceMonitor.DeviceConnected -= HandleDeviceConnected;

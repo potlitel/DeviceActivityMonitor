@@ -7,10 +7,22 @@ namespace DAM.Core.Interfaces
 {
     public interface IDevicePersistenceService // Nuevo nombre más sugerente
     {
-        // Mantiene la funcionalidad de registro de presencia (HandleDeviceConnected)
+        /// <summary>
+        /// Persiste un registro de presencia de dispositivo (conexión) en la base de datos.
+        /// Esta operación es asíncrona y transaccional.
+        /// </summary>
         Task PersistPresenceAsync(string serialNumber);
 
-        // NUEVA FUNCIONALIDAD: Almacena la actividad completada (HandleActivityCompleted)
+        /// <summary>
+        /// Almacena una actividad completada de un dispositivo en la base de datos.
+        /// Esta operación es asíncrona y transaccional.
+        /// </summary>
         Task PersistActivityAsync(DeviceActivity activity);
+
+        /// <summary>
+        /// Registra un evento de inicio o parada del Worker Service en el historial de la base de datos.
+        /// Se utiliza para auditar el ciclo de vida del servicio principal.
+        /// </summary>
+        Task PersistServiceEventAsync(ServiceEvent serviceEvent);
     }
 }
