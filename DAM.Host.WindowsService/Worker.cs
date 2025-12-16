@@ -151,7 +151,7 @@ public class Worker : BackgroundService
             // 1. PERSISTIR LA ACTIVIDAD FINAL (Con sus contadores finales, FilesCopied y FilesDeleted)
             await _devicePersistenceService.PersistActivityAsync(activity);
 
-            // 2. CALCULAR Y PERSISTIR FACTURA (¡NUEVA UBICACIÓN!)
+            // 2. CALCULAR Y PERSISTIR FACTURA
             // Ahora, la actividad está completa y se puede aplicar la regla de no eliminación.
             await _devicePersistenceService.PersistInvoiceAsync(activity);
 

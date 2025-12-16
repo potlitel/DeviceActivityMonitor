@@ -24,7 +24,7 @@
             public const string DeviceConnected = "Device connected: {DriveLetter}";
             public const string DeviceDisconnected = "Device disconnected: {DriveLetter}";
             public const string TotalConnectedDevices = "Total connected devices: {Count}";
-            public const string ActivityProcessed = "Presencia y Factura inicial procesadas para {SN}.";
+            public const string ActivityProcessed = "Presencia procesada para {SN}.";
             public const string ActivityFailed = "FALLO: Error al orquestar la persistencia de conexión para {SN}.";
             public const string ActivityFinished = "Activity finished for {SN}. Time: {Time}";
             public const string ActivityInvoiceProcessed = "Actividad y Factura final del dispositivo {SN} persistidas exitosamente.";

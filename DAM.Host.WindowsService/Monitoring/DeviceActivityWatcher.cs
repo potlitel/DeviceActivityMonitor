@@ -83,7 +83,7 @@ namespace DAM.Host.WindowsService.Monitoring
                     FinalAvailableMB = _initialAvailableSpace / mbConversionFactor, // Inicialmente son iguales
 
                     // Metadatos que requerirían WMI real en producción
-                    SerialNumber = GetSerialNumber(driveLetter.TrimEnd('\\')),
+                    SerialNumber = GetSerialNumberImproved(driveLetter.TrimEnd('\\')),
                     Model = GetModel(driveLetter.TrimEnd('\\')),
                 };
             }
@@ -184,6 +184,68 @@ namespace DAM.Host.WindowsService.Monitoring
                 _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
             }
             return "UNKNOWN_WMI";
+        }
+
+        private string GetSerialNumberImproved(string driveRoot)
+        {
+            // Asegura que la letra de unidad tenga el formato "E:"
+            string driveLetter = driveRoot.TrimEnd('\\');
+
+            // 1. Intentar obtener el Serial Number (SN) directamente desde Win32_PhysicalMedia
+            try
+            {
+                // La consulta busca el Physical Media asociado al Logical Disk.
+                string queryPhysicalMedia = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+
+                using (var searcher = new ManagementObjectSearcher(queryPhysicalMedia))
+                {
+                    foreach (ManagementObject partition in searcher.Get())
+                    {
+                        // Ahora asociamos la partición con el disco físico real
+                        string queryDiskDrive = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+                        using (var searcherDisk = new ManagementObjectSearcher(queryDiskDrive))
+                        {
+                            foreach (ManagementObject disk in searcherDisk.Get())
+                            {
+                                // Encontrar la Win32_PhysicalMedia asociada a este disco
+                                string queryPhysical = $"ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='{disk["DeviceID"]}'}} WHERE AssocClass = Win32_DiskDriveToDiskMedia";
+                                using (var searcherPhysical = new ManagementObjectSearcher(queryPhysical))
+                                {
+                                    foreach (ManagementObject physicalMedia in searcherPhysical.Get())
+                                    {
+                                        // El campo SerialNumber de Win32_PhysicalMedia es el que queremos.
+                                        string serialNumber = physicalMedia["SerialNumber"]?.ToString().Trim();
+
+                                        // Si encontramos un SN válido, lo retornamos inmediatamente.
+                                        if (!string.IsNullOrEmpty(serialNumber) && serialNumber != "0")
+                                        {
+                                            return serialNumber;
+                                        }
+                                        // Si no se encuentra SerialNumber en Win32_PhysicalMedia, 
+                                        // podemos usar la información de Win32_DiskDrive (tu enfoque anterior)
+                                        else
+                                        {
+                                            string pnpID = disk["PNPDeviceID"]?.ToString() ?? "N/A";
+                                            string signature = disk["Signature"]?.ToString() ?? "N/A";
+                                            // Retorna un identificador compuesto robusto si el SN directo falla.
+                                            return $"PNP_{pnpID}_{signature}";
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                // En caso de que falle toda la lógica WMI, registra el error y retorna un identificador único por falla.
+                _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
+            }
+
+            // Si todo falla (incluyendo la excepción try/catch), genera un identificador único de fallback.
+            // Esto asegura que NUNCA se repita UNKNOWN_WMI.
+            return $"WMI_FAIL_{Guid.NewGuid().ToString()}";
         }
 
         /// <summary>

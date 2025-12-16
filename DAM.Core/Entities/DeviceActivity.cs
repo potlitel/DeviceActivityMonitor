@@ -34,7 +34,7 @@
         // Esto se manejaría como una query aparte o en la misma tabla con un Distinct en la fecha.
 
         /// <summary>
-        /// Método para establecer el valor del campo privado '_timeInserted' al finalizar
+        /// Método para establecer el valor del campo 'TimeInserted' al finalizar
         /// </summary>
         public void SetTimeInsertedDuration()
         {

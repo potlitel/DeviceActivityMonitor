@@ -97,27 +97,31 @@ namespace DAM.Infrastructure.Persistence
         /// <inheritdoc/>
         public async Task PersistInvoiceAsync(DeviceActivity activity)
         {
-            // 1. Calcular la factura usando el IInvoiceCalculator inyectado
-            var invoice = _invoiceCalculator.CalculateInvoice(activity);
+            Invoice invoice = null!;
+            if (activity.FilesCopied.Count > 0)
+            {
+                invoice = _invoiceCalculator.CalculateInvoice(activity);
+            }
 
             // 2. Crear un ámbito (scope) para la transacción de persistencia
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                // 3. Obtener el servicio de almacenamiento Scoped (que tiene el DbContext)
-                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+            using var scope = _scopeFactory.CreateScope();
+            // 3. Obtener el servicio de almacenamiento Scoped (que tiene el DbContext)
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
 
-                try
+            try
+            {
+                // 4. Persistir la factura.
+                if (invoice != null)
                 {
-                    // 4. Persistir la factura.
                     await storageService.StoreInvoiceAsync(invoice);
 
                     _logger.LogInformation("Factura de {Monto:C} calculada y persistida para {SN}.",
                                            invoice.TotalAmount, invoice.SerialNumber);
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.", invoice.SerialNumber);
-                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.", invoice.SerialNumber);
             }
         }
     }
