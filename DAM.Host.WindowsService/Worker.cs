@@ -97,12 +97,7 @@ public class Worker : BackgroundService
                 {
                     // 2. REGISTRAR PRESENCIA (Llama al método que usa scope y persiste)
                     await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
-
-                    // 3. CALCULAR Y PERSISTIR FACTURA (Llama al método que calcula la factura
-                    // con IInvoiceCalculator y la persiste en un scope aislado)
-                    await _devicePersistenceService.PersistInvoiceAsync(watcher.CurrentActivity);
-
-                    _logger.LogInformation("Presencia y Factura inicial procesadas para {SN}.", watcher.CurrentActivity.SerialNumber);
+                    _logger.LogInformation("Presencia procesada para dispositivo con {SN}.", watcher.CurrentActivity.SerialNumber);
                 }
                 catch (Exception ex)
                 {
@@ -150,7 +145,21 @@ public class Worker : BackgroundService
     {
         _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
 
-        await _devicePersistenceService.PersistActivityAsync(activity);
+        try
+        {
+            // 1. PERSISTIR LA ACTIVIDAD FINAL (Con sus contadores finales, FilesCopied y FilesDeleted)
+            await _devicePersistenceService.PersistActivityAsync(activity);
+
+            // 2. CALCULAR Y PERSISTIR FACTURA (¡NUEVA UBICACIÓN!)
+            // Ahora, la actividad está completa y se puede aplicar la regla de no eliminación.
+            await _devicePersistenceService.PersistInvoiceAsync(activity);
+
+            _logger.LogInformation("Actividad y Factura final del dispositivo {SN} persistidas exitosamente.", activity.SerialNumber);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad o la factura del dispositivo {SN}.", activity.SerialNumber);
+        }
     }
 
     /// <summary>

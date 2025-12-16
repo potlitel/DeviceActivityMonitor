@@ -18,16 +18,25 @@ namespace DAM.Infrastructure.Persistence
             // NOTA: FilesCopied es una lista de strings; usamos su Count.
             int filesCount = activity.FilesCopied?.Count ?? 0;
 
-            // 2. Calcular el monto total
-            decimal total = filesCount * PRICE_PER_FILE;
+            var copiedFiles = activity.FilesCopied ?? [];
+            var deletedFiles = activity.FilesDeleted ?? [];
 
-            // 3. Crear el objeto Invoice
+            // La lista de archivos copiados que sobrevivieron (no fueron eliminados)
+            var survivingFiles = copiedFiles.Except(deletedFiles).ToList();
+
+            // Número de archivos por los que realmente se cobra
+            int filesToBillCount = survivingFiles.Count;
+
+            decimal total = filesToBillCount * PRICE_PER_FILE;
+
+            // La descripción debe reflejar el cálculo
             return new Invoice
             {
                 SerialNumber = activity.SerialNumber,
-                Timestamp = DateTime.UtcNow,
+                // Usamos ExtractedAt, pues la factura se genera al finalizar la actividad
+                Timestamp = activity.ExtractedAt ?? DateTime.UtcNow,
                 TotalAmount = total,
-                Description = $"Factura por {filesCount} archivo(s) copiado(s) a un costo de {PRICE_PER_FILE:C} c/u."
+                Description = $"Factura por {filesToBillCount} archivo(s) neto(s) (Copiados: {copiedFiles.Count} - Eliminados: {deletedFiles.Count}). Costo: {PRICE_PER_FILE:C} c/u."
             };
         }
     }
