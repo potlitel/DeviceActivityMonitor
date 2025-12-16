@@ -1,3 +1,4 @@
+using DAM.Core.Constants;
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using DAM.Host.WindowsService.Monitoring;
@@ -54,14 +55,14 @@ public class Worker : BackgroundService
     /// <inheritdoc path="param[@name='stoppingToken']" />
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("DAM Worker Service starting at: {time}", DateTimeOffset.Now);
+        _logger.LogInformation(WorkerMessages.Log.ServiceStarting, DateTimeOffset.Now);
 
         // 1. Registrar evento de inicio en la base de datos (Persistencia de Eventos)
         await _devicePersistenceService.PersistServiceEventAsync(new ServiceEvent
         {
             Timestamp = DateTime.Now,
-            EventType = "SERVICE_START",
-            Message = "El servicio Device Activity Monitor ha iniciado la ejecución."
+            EventType = WorkerMessages.ServiceEventTypes.ServiceStart,
+            Message = WorkerMessages.ServiceEventMessages.ServiceStarted
         });
 
         // 2. Configurar y arrancar el monitoreo WMI
@@ -70,7 +71,7 @@ public class Worker : BackgroundService
         _deviceMonitor.DeviceDisconnected += HandleDeviceDisconnected;
         _deviceMonitor.StartMonitoring();
 
-        _logger.LogInformation("Device Monitoring Started.");
+        _logger.LogInformation(WorkerMessages.Log.MonitoringStarted);
 
         // El Worker se mantiene en ejecución hasta que se solicita la detención.
         await Task.Delay(Timeout.Infinite, stoppingToken);
@@ -83,7 +84,7 @@ public class Worker : BackgroundService
     /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
     private void HandleDeviceConnected(string driveLetter)
     {
-        _logger.LogInformation("Device connected: {DriveLetter}", driveLetter);
+        _logger.LogInformation(WorkerMessages.Log.DeviceConnected, driveLetter);
 
         // Aseguramos que solo haya un watcher por unidad
         if (!_activeWatchers.ContainsKey(driveLetter))
@@ -97,13 +98,13 @@ public class Worker : BackgroundService
                 {
                     // 2. REGISTRAR PRESENCIA (Llama al método que usa scope y persiste)
                     await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
-                    _logger.LogInformation("Presencia procesada para dispositivo con {SN}.", watcher.CurrentActivity.SerialNumber);
+                    _logger.LogInformation(WorkerMessages.Log.ActivityProcessed, watcher.CurrentActivity.SerialNumber);
                 }
                 catch (Exception ex)
                 {
                     // Nota: El servicio de persistencia ya debería haber logeado los errores específicos,
                     // pero es buena práctica logear el fallo del orquestador.
-                    _logger.LogError(ex, "FALLO: Error al orquestar la persistencia de conexión para {SN}.", watcher.CurrentActivity.SerialNumber);
+                    _logger.LogError(ex, WorkerMessages.Log.ActivityFailed, watcher.CurrentActivity.SerialNumber);
                 }
             });
 
@@ -111,7 +112,7 @@ public class Worker : BackgroundService
             _activeWatchers.TryAdd(driveLetter, (DeviceActivityWatcher)watcher);
 
             // Total de dispositivos conectados
-            _logger.LogInformation("Total connected devices: {Count}", _activeWatchers.Count);
+            _logger.LogInformation(WorkerMessages.Log.TotalConnectedDevices, _activeWatchers.Count);
         }
     }
 
@@ -121,7 +122,7 @@ public class Worker : BackgroundService
     /// <param name="driveLetter">La letra de unidad asignada al dispositivo (ej: "E:").</param>
     private void HandleDeviceDisconnected(string driveLetter)
     {
-        _logger.LogInformation("Device disconnected: {DriveLetter}", driveLetter);
+        _logger.LogInformation(WorkerMessages.Log.DeviceDisconnected, driveLetter);
 
         if (_activeWatchers.TryRemove(driveLetter, out var watcher))
         {
@@ -129,7 +130,7 @@ public class Worker : BackgroundService
             watcher.FinalizeActivity();
             watcher.Dispose();
 
-            _logger.LogInformation("Total connected devices: {Count}", _activeWatchers.Count);
+            _logger.LogInformation(WorkerMessages.Log.TotalConnectedDevices, _activeWatchers.Count);
         }
     }
 
@@ -143,7 +144,7 @@ public class Worker : BackgroundService
     /// <param name="activity">Los datos finales de actividad.</param>
     private async void HandleActivityCompleted(DeviceActivity activity)
     {
-        _logger.LogInformation("Activity finished for {SN}. Time: {Time}", activity.SerialNumber, activity.TimeInserted);
+        _logger.LogInformation(WorkerMessages.Log.ActivityFinished, activity.SerialNumber, activity.TimeInserted);
 
         try
         {
@@ -154,11 +155,11 @@ public class Worker : BackgroundService
             // Ahora, la actividad está completa y se puede aplicar la regla de no eliminación.
             await _devicePersistenceService.PersistInvoiceAsync(activity);
 
-            _logger.LogInformation("Actividad y Factura final del dispositivo {SN} persistidas exitosamente.", activity.SerialNumber);
+            _logger.LogInformation(WorkerMessages.Log.ActivityInvoiceProcessed, activity.SerialNumber);
         }
         catch (Exception ex)
         {
-            _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad o la factura del dispositivo {SN}.", activity.SerialNumber);
+            _logger.LogCritical(ex, WorkerMessages.Log.ActivityInvoiceProcessedFailed, activity.SerialNumber);
         }
     }
 
@@ -169,14 +170,14 @@ public class Worker : BackgroundService
     /// <inheritdoc path="param[@name='stoppingToken']" />
     public override async Task StopAsync(CancellationToken stoppingToken)
     {
-        _logger.LogInformation("DAM Worker Service is stopping.");
+        _logger.LogInformation(WorkerMessages.Log.ServiceStopping);
 
         // Registrar evento de parada delegado al servicio de persistencia.
         await _devicePersistenceService.PersistServiceEventAsync(new ServiceEvent
         {
             Timestamp = DateTime.Now,
-            EventType = "SERVICE_STOP",
-            Message = "El servicio Device Activity Monitor ha finalizado la ejecución."
+            EventType = WorkerMessages.ServiceEventTypes.ServiceStop,
+            Message = WorkerMessages.ServiceEventMessages.ServiceStopped
         });
 
         // Desuscribir y detener el monitor principal

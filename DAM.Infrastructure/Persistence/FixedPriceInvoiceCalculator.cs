@@ -1,8 +1,5 @@
 ﻿using DAM.Core.Entities;
 using DAM.Core.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DAM.Infrastructure.Persistence
 {
