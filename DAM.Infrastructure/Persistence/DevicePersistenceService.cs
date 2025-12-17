@@ -58,12 +58,12 @@ namespace DAM.Infrastructure.Persistence
                 {
                     await storageService.StoreActivityAsync(activity);
 
-                    _logger.LogInformation("Actividad del dispositivo {SN} persistida exitosamente.", activity.SerialNumber);
+                    _logger.LogInformation(Messages.Persistence.ActivitySaved, activity.SerialNumber);
                 }
                 catch (Exception ex)
                 {
                     // El log crítico es importante mantenerlo.
-                    _logger.LogCritical(ex, "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.", activity.SerialNumber);
+                    _logger.LogCritical(ex, Messages.Persistence.ActivityCritical, activity.SerialNumber);
                 }
             } // El ámbito se desecha aquí.
         }
@@ -81,12 +81,12 @@ namespace DAM.Infrastructure.Persistence
                     // Registra el evento de servicio (START/STOP)
                     await storageService.StoreServiceEventAsync(serviceEvent);
 
-                    _logger.LogInformation("Evento de servicio '{EventType}' persistido correctamente.", serviceEvent.EventType);
+                    _logger.LogInformation(Messages.Persistence.EventSaved, serviceEvent.EventType);
                 }
                 catch (Exception ex)
                 {
                     // Se registra un error si la persistencia del evento falla.
-                    _logger.LogError(ex, "FALLO al persistir el evento de servicio '{EventType}'.", serviceEvent.EventType);
+                    _logger.LogError(ex, Messages.Persistence.EventFailed, serviceEvent.EventType);
                     // NOTA: No re-lanzamos la excepción ya que el evento debe continuar su flujo.
                 }
             }
