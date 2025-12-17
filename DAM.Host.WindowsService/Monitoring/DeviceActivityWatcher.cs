@@ -1,7 +1,6 @@
-﻿using DAM.Core.Constants;
-using DAM.Core.Entities;
+﻿using DAM.Core.Entities;
 using DAM.Host.WindowsService.Monitoring.Interfaces;
-using System.Management;
+using DAM.Infrastructure.Utils;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
@@ -84,8 +83,8 @@ namespace DAM.Host.WindowsService.Monitoring
                     FinalAvailableMB = _initialAvailableSpace / mbConversionFactor, // Inicialmente son iguales
 
                     // Metadatos que requerirían WMI real en producción
-                    SerialNumber = GetSerialNumberImproved(driveLetter.TrimEnd('\\')),
-                    Model = GetModel(driveLetter.TrimEnd('\\')),
+                    SerialNumber = WMI_Utils.GetPersistentSerialNumber(driveLetter.TrimEnd('\\'), _logger),
+                    Model = WMI_Utils.GetModel(driveLetter.TrimEnd('\\'), _logger),
                 };
             }
             else
@@ -151,141 +150,141 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         /// <param name="driveRoot">La raíz del disco (ej: "E:").</param>
         /// <returns>El número de serie o "UNKNOWN_WMI" si falla.</returns>
-        private string GetSerialNumber(string driveRoot)
-        {
-            // La letra de unidad debe terminar en dos puntos, ej: "E:"
-            string driveLetter = driveRoot.TrimEnd('\\');
+        //private string GetSerialNumber(string driveRoot)
+        //{
+        //    // La letra de unidad debe terminar en dos puntos, ej: "E:"
+        //    string driveLetter = driveRoot.TrimEnd('\\');
 
-            try
-            {
-                // 1. Encontrar la partición asociada al disco lógico
-                string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+        //    try
+        //    {
+        //        // 1. Encontrar la partición asociada al disco lógico
+        //        string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
 
-                using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
-                {
-                    foreach (ManagementObject partition in searcherLogicalDisk.Get())
-                    {
-                        // 2. Encontrar el disco físico asociado a la partición
-                        string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+        //        using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
+        //        {
+        //            foreach (ManagementObject partition in searcherLogicalDisk.Get())
+        //            {
+        //                // 2. Encontrar el disco físico asociado a la partición
+        //                string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
 
-                        using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
-                        {
-                            foreach (ManagementObject disk in searcherPartition.Get())
-                            {
-                                // 3. El número de serie está en el campo 'Signature' o 'PNPDeviceID' en Win32_DiskDrive o 'Serial Number' en Win32_PhysicalMedia
-                                // Usaremos el PNPDeviceID o Model para una identificación única.
-                                return (disk["PNPDeviceID"]?.ToString() ?? "N/A") + "_" + (disk["Signature"]?.ToString() ?? "N/A");
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
-            }
-            return "UNKNOWN_WMI";
-        }
+        //                using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
+        //                {
+        //                    foreach (ManagementObject disk in searcherPartition.Get())
+        //                    {
+        //                        // 3. El número de serie está en el campo 'Signature' o 'PNPDeviceID' en Win32_DiskDrive o 'Serial Number' en Win32_PhysicalMedia
+        //                        // Usaremos el PNPDeviceID o Model para una identificación única.
+        //                        return (disk["PNPDeviceID"]?.ToString() ?? "N/A") + "_" + (disk["Signature"]?.ToString() ?? "N/A");
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
+        //    }
+        //    return "UNKNOWN_WMI";
+        //}
 
-        private string GetSerialNumberImproved(string driveRoot)
-        {
-            // Asegura que la letra de unidad tenga el formato "E:"
-            string driveLetter = driveRoot.TrimEnd('\\');
+        //private string GetSerialNumberImproved(string driveRoot)
+        //{
+        //    // Asegura que la letra de unidad tenga el formato "E:"
+        //    string driveLetter = driveRoot.TrimEnd('\\');
 
-            // 1. Intentar obtener el Serial Number (SN) directamente desde Win32_PhysicalMedia
-            try
-            {
-                // La consulta busca el Physical Media asociado al Logical Disk.
-                string queryPhysicalMedia = string.Format(WmiQueries.LogicalDiskToPartition, driveLetter);
+        //    // 1. Intentar obtener el Serial Number (SN) directamente desde Win32_PhysicalMedia
+        //    try
+        //    {
+        //        // La consulta busca el Physical Media asociado al Logical Disk.
+        //        string queryPhysicalMedia = string.Format(WmiQueries.LogicalDiskToPartition, driveLetter);
 
-                using (var searcher = new ManagementObjectSearcher(queryPhysicalMedia))
-                {
-                    foreach (ManagementObject partition in searcher.Get())
-                    {
-                        // Ahora asociamos la partición con el disco físico real
-                        string queryDiskDrive = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
-                        using (var searcherDisk = new ManagementObjectSearcher(queryDiskDrive))
-                        {
-                            foreach (ManagementObject disk in searcherDisk.Get())
-                            {
-                                // Encontrar la Win32_PhysicalMedia asociada a este disco
-                                string queryPhysical = $"ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='{disk["DeviceID"]}'}} WHERE AssocClass = Win32_DiskDriveToDiskMedia";
-                                using (var searcherPhysical = new ManagementObjectSearcher(queryPhysical))
-                                {
-                                    foreach (ManagementObject physicalMedia in searcherPhysical.Get())
-                                    {
-                                        // El campo SerialNumber de Win32_PhysicalMedia es el que queremos.
-                                        string serialNumber = physicalMedia["SerialNumber"]?.ToString().Trim();
+        //        using (var searcher = new ManagementObjectSearcher(queryPhysicalMedia))
+        //        {
+        //            foreach (ManagementObject partition in searcher.Get())
+        //            {
+        //                // Ahora asociamos la partición con el disco físico real
+        //                string queryDiskDrive = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+        //                using (var searcherDisk = new ManagementObjectSearcher(queryDiskDrive))
+        //                {
+        //                    foreach (ManagementObject disk in searcherDisk.Get())
+        //                    {
+        //                        // Encontrar la Win32_PhysicalMedia asociada a este disco
+        //                        string queryPhysical = $"ASSOCIATORS OF {{Win32_DiskDrive.DeviceID='{disk["DeviceID"]}'}} WHERE AssocClass = Win32_DiskDriveToDiskMedia";
+        //                        using (var searcherPhysical = new ManagementObjectSearcher(queryPhysical))
+        //                        {
+        //                            foreach (ManagementObject physicalMedia in searcherPhysical.Get())
+        //                            {
+        //                                // El campo SerialNumber de Win32_PhysicalMedia es el que queremos.
+        //                                string serialNumber = physicalMedia["SerialNumber"]?.ToString().Trim();
 
-                                        // Si encontramos un SN válido, lo retornamos inmediatamente.
-                                        if (!string.IsNullOrEmpty(serialNumber) && serialNumber != "0")
-                                        {
-                                            return serialNumber;
-                                        }
-                                        // Si no se encuentra SerialNumber en Win32_PhysicalMedia, 
-                                        // podemos usar la información de Win32_DiskDrive (tu enfoque anterior)
-                                        else
-                                        {
-                                            string pnpID = disk["PNPDeviceID"]?.ToString() ?? "N/A";
-                                            string signature = disk["Signature"]?.ToString() ?? "N/A";
-                                            // Retorna un identificador compuesto robusto si el SN directo falla.
-                                            //return $"PNP_{pnpID}_{signature}";
-                                            return $"{DataConstants.PnpPrefix}{pnpID}_{signature}";
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                // En caso de que falle toda la lógica WMI, registra el error y retorna un identificador único por falla.
-                _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
-            }
+        //                                // Si encontramos un SN válido, lo retornamos inmediatamente.
+        //                                if (!string.IsNullOrEmpty(serialNumber) && serialNumber != "0")
+        //                                {
+        //                                    return serialNumber;
+        //                                }
+        //                                // Si no se encuentra SerialNumber en Win32_PhysicalMedia, 
+        //                                // podemos usar la información de Win32_DiskDrive (tu enfoque anterior)
+        //                                else
+        //                                {
+        //                                    string pnpID = disk["PNPDeviceID"]?.ToString() ?? "N/A";
+        //                                    string signature = disk["Signature"]?.ToString() ?? "N/A";
+        //                                    // Retorna un identificador compuesto robusto si el SN directo falla.
+        //                                    //return $"PNP_{pnpID}_{signature}";
+        //                                    return $"{DataConstants.PnpPrefix}{pnpID}_{signature}";
+        //                                }
+        //                            }
+        //                        }
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        // En caso de que falle toda la lógica WMI, registra el error y retorna un identificador único por falla.
+        //        _logger.LogError(ex, "Fallo WMI al obtener Serial Number para la unidad {DriveLetter}", driveLetter);
+        //    }
 
-            // Si todo falla (incluyendo la excepción try/catch), genera un identificador único de fallback.
-            // Esto asegura que NUNCA se repita UNKNOWN_WMI.
-            //return $"WMI_FAIL_{Guid.NewGuid().ToString()}";
-            return $"{DataConstants.WmiFailPrefix}{Guid.NewGuid()}";
-        }
+        //    // Si todo falla (incluyendo la excepción try/catch), genera un identificador único de fallback.
+        //    // Esto asegura que NUNCA se repita UNKNOWN_WMI.
+        //    //return $"WMI_FAIL_{Guid.NewGuid().ToString()}";
+        //    return $"{DataConstants.WmiFailPrefix}{Guid.NewGuid()}";
+        //}
 
-        /// <summary>
-        /// Obtiene el Modelo del dispositivo físico asociado a la letra de unidad usando WMI.
-        /// </summary>
-        /// <param name="driveRoot">La raíz del disco (ej: "E:").</param>
-        /// <returns>El modelo o "UNKNOWN_WMI" si falla.</returns>
-        private string GetModel(string driveRoot)
-        {
-            string driveLetter = driveRoot.TrimEnd('\\');
-            try
-            {
-                string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+        ///// <summary>
+        ///// Obtiene el Modelo del dispositivo físico asociado a la letra de unidad usando WMI.
+        ///// </summary>
+        ///// <param name="driveRoot">La raíz del disco (ej: "E:").</param>
+        ///// <returns>El modelo o "UNKNOWN_WMI" si falla.</returns>
+        //private string GetModel(string driveRoot)
+        //{
+        //    string driveLetter = driveRoot.TrimEnd('\\');
+        //    try
+        //    {
+        //        string queryLogicalDisk = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
 
-                using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
-                {
-                    foreach (ManagementObject partition in searcherLogicalDisk.Get())
-                    {
-                        string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
+        //        using (var searcherLogicalDisk = new ManagementObjectSearcher(queryLogicalDisk))
+        //        {
+        //            foreach (ManagementObject partition in searcherLogicalDisk.Get())
+        //            {
+        //                string queryPartition = $"ASSOCIATORS OF {{Win32_DiskPartition.DeviceID='{partition["DeviceID"]}'}} WHERE AssocClass = Win32_PartitionToDisk";
 
-                        using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
-                        {
-                            foreach (ManagementObject disk in searcherPartition.Get())
-                            {
-                                // El modelo se encuentra en el campo 'Model' de Win32_DiskDrive
-                                return disk["Model"]?.ToString() ?? "N/A";
-                            }
-                        }
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, "Fallo WMI al obtener Modelo para la unidad {DriveLetter}", driveLetter);
-            }
-            return "UNKNOWN_WMI";
-        }
+        //                using (var searcherPartition = new ManagementObjectSearcher(queryPartition))
+        //                {
+        //                    foreach (ManagementObject disk in searcherPartition.Get())
+        //                    {
+        //                        // El modelo se encuentra en el campo 'Model' de Win32_DiskDrive
+        //                        return disk["Model"]?.ToString() ?? "N/A";
+        //                    }
+        //                }
+        //            }
+        //        }
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        _logger.LogError(ex, "Fallo WMI al obtener Modelo para la unidad {DriveLetter}", driveLetter);
+        //    }
+        //    return "UNKNOWN_WMI";
+        //}
 
 
         /// <summary>
