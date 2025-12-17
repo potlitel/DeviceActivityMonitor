@@ -120,9 +120,9 @@ namespace DAM.Host.WindowsService.Extensions
         /// <param name="services"></param>
         /// <returns>La colección de servicios para encadenamiento.</returns>
         public static IServiceCollection AddApplicationSettings(this IServiceCollection services, IConfiguration configuration) {
-            
-            services.Configure<InvoiceSettings>(configuration.GetSection("InvoiceSettings"));
-            services.Configure<StorageSettings>(configuration.GetSection("StorageSettings"));
+
+            services.Configure<InvoiceSettings>(configuration.GetSection(DataConstants.ConfigSections.InvoiceSettings));
+            services.Configure<StorageSettings>(configuration.GetSection(DataConstants.ConfigSections.StorageSettings));
 
             return services;
 
