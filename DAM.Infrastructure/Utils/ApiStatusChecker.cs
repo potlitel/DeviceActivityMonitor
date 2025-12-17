@@ -1,8 +1,6 @@
-﻿using DAM.Core.Interfaces;
+﻿using DAM.Core.Constants;
+using DAM.Core.Interfaces;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DAM.Infrastructure.Utils
 {
@@ -36,12 +34,12 @@ namespace DAM.Infrastructure.Utils
             }
             catch (HttpRequestException ex)
             {
-                _logger.LogWarning("Web API no disponible. Falló la conexión: {Message}", ex.Message);
+                _logger.LogWarning(Messages.Api.NotAvailable, ex.Message);
                 return false;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error desconocido al verificar la API.");
+                _logger.LogError(ex, Messages.Api.UnknownError);
                 return false;
             }
         }
