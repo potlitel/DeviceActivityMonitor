@@ -1,4 +1,5 @@
-﻿using DAM.Core.Interfaces;
+﻿using DAM.Core.Constants;
+using DAM.Core.Interfaces;
 using System.Management;
 
 namespace DAM.Host.WindowsService.Monitoring
@@ -11,40 +12,47 @@ namespace DAM.Host.WindowsService.Monitoring
     /// </remarks>
     public class WmiDeviceMonitor : IDeviceMonitor, IDisposable
     {
+        private readonly ILogger<WmiDeviceMonitor> _logger;
+        private ManagementEventWatcher? _connectWatcher;
+        private ManagementEventWatcher? _disconnectWatcher;
+
         /// <inheritdoc/>
         public event Action<string>? DeviceConnected;
 
         /// <inheritdoc/>
         public event Action<string>? DeviceDisconnected;
 
-        // WMI Query Language (WQL) para detectar inserción de dispositivos (DriveType 2=Removable)
-        private const string DeviceConnectQuery = "SELECT * FROM __InstanceCreationEvent WITHIN 2 " +
-            "WHERE TargetInstance ISA 'Win32_LogicalDisk' AND TargetInstance.DriveType = 2";
-
-        // WQL para detectar remoción de dispositivos
-        private const string DeviceDisconnectQuery = "SELECT * FROM __InstanceDeletionEvent WITHIN 2 " +
-            "WHERE TargetInstance ISA 'Win32_LogicalDisk' AND TargetInstance.DriveType = 2";
-
-        private ManagementEventWatcher? _connectWatcher;
-        private ManagementEventWatcher? _disconnectWatcher;
+        public WmiDeviceMonitor(ILogger<WmiDeviceMonitor> logger)
+        {
+            _logger = logger;
+        }
 
         /// <inheritdoc/>
         public void StartMonitoring()
         {
-            // Observador de conexión
-            _connectWatcher = new ManagementEventWatcher(new WqlEventQuery(DeviceConnectQuery));
-            _connectWatcher.EventArrived += OnDeviceConnected;
-            _connectWatcher.Start();
+            try
+            {
+                _connectWatcher = new ManagementEventWatcher(new WqlEventQuery(WmiQueries.DeviceConnect));
+                _connectWatcher.EventArrived += OnDeviceConnected;
+                _connectWatcher.Start();
 
-            // Observador de desconexión
-            _disconnectWatcher = new ManagementEventWatcher(new WqlEventQuery(DeviceDisconnectQuery));
-            _disconnectWatcher.EventArrived += OnDeviceDisconnected;
-            _disconnectWatcher.Start();
+                _disconnectWatcher = new ManagementEventWatcher(new WqlEventQuery(WmiQueries.DeviceDisconnect));
+                _disconnectWatcher.EventArrived += OnDeviceDisconnected;
+                _disconnectWatcher.Start();
+
+                _logger.LogInformation(Messages.Wmi.StartSuccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, Messages.Wmi.StartCritical);
+                throw;
+            }
         }
 
         /// <inheritdoc/>
         public void StopMonitoring()
         {
+            _logger.LogInformation(Messages.Wmi.StopInfo);
             _connectWatcher?.Stop();
             _disconnectWatcher?.Stop();
             Dispose();
@@ -62,13 +70,7 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </remarks>
         private void OnDeviceConnected(object sender, EventArrivedEventArgs e)
         {
-            var instance = (ManagementBaseObject)e.NewEvent["TargetInstance"];
-            var driveLetter = instance["Name"]?.ToString(); // Ej: "E:"
-
-            if (driveLetter != null)
-            {
-                DeviceConnected?.Invoke(driveLetter);
-            }
+            ProcessEvent(e, DeviceConnected, "Conexión");
         }
 
         /// <summary>
@@ -83,13 +85,41 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </remarks>
         private void OnDeviceDisconnected(object sender, EventArrivedEventArgs e)
         {
-            var instance = (ManagementBaseObject)e.NewEvent["TargetInstance"];
-            // Aquí obtenemos el nombre de la unidad que se desconectó.
-            var driveLetter = instance["Name"]?.ToString();
+            ProcessEvent(e, DeviceDisconnected, "Desconexión");
+        }
 
-            if (driveLetter != null)
+        /// <summary>
+        /// Realiza el parsing del evento WMI entrante, extrae los metadatos de la instancia 
+        /// y notifica a los suscriptores del evento correspondiente.
+        /// </summary>
+        /// <param name="e">Argumentos del evento generado por WMI que contienen la estructura 'TargetInstance'.</param>
+        /// <param name="action">El delegado (evento) que debe ser invocado tras la validación exitosa.</param>
+        /// <param name="eventType">Etiqueta descriptiva del tipo de evento para propósitos de trazabilidad y diagnóstico.</param>
+        /// <remarks>
+        /// Este método actúa como un puente de normalización entre los objetos dinámicos de WMI 
+        /// y la lógica de negocio fuertemente tipada de la aplicación. 
+        /// Se asegura de filtrar valores nulos y capturar excepciones de acceso a propiedades de gestión.
+        /// </remarks>
+        private void ProcessEvent(EventArrivedEventArgs e, Action<string>? action, string eventType)
+        {
+            try
             {
-                DeviceDisconnected?.Invoke(driveLetter);
+                var instance = (ManagementBaseObject)e.NewEvent["TargetInstance"];
+                var driveLetter = instance["Name"]?.ToString(); // Ej: "E:"
+
+                if (!string.IsNullOrEmpty(driveLetter))
+                {
+                    _logger.LogDebug(Messages.Wmi.EventDetected, eventType, driveLetter);
+                    action?.Invoke(driveLetter);
+                }
+                else
+                {
+                    _logger.LogWarning(Messages.Wmi.InvalidDrive, eventType);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.Wmi.ProcessError, eventType);
             }
         }
 

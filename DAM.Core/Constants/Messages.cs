@@ -59,5 +59,18 @@
             public const string NotAvailable = "Web API no disponible. Falló la conexión: {Message}";
             public const string UnknownError = "Error desconocido al verificar la API.";
         }
+
+        public static class Wmi
+        {
+            public const string StartSuccess = "Monitoreo WMI iniciado correctamente.";
+            public const string StartCritical = "No se pudo iniciar el servicio de monitoreo WMI.";
+            public const string StopInfo = "Deteniendo monitoreo WMI...";
+            public const string EventDetected = "Evento WMI detectado: {EventType} en {Drive}";
+            public const string ProcessError = "Error al procesar evento WMI de {EventType}.";
+
+            // Mensajes adicionales para el parsing profesional
+            public const string MissingTarget = "Evento WMI recibido sin 'TargetInstance' válida. Tipo: {EventType}";
+            public const string InvalidDrive = "Se detectó un evento {Type}, pero la letra de unidad es nula o inválida.";
+        }
     }
 }

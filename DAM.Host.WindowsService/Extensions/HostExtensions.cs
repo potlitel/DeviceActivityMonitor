@@ -107,7 +107,7 @@ namespace DAM.Host.WindowsService.Extensions
                     // Manejo de errores: Si la migración falla, el servicio debe ser capaz de reportarlo.
                     // En un ambiente real, se usaría un ILogger para reportar esto.
                     var logger = services.GetRequiredService<ILogger<Worker>>();
-                    logger.LogError(ex, "Ocurrió un error durante la migración de la base de datos.");
+                    logger.LogError(ex, Messages.Repository.MigrationError);
                     throw;
                 }
             }
