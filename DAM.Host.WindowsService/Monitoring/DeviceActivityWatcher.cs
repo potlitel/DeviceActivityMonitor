@@ -207,15 +207,43 @@ namespace DAM.Host.WindowsService.Monitoring
         /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo creado.</param>
         private void UpdateMetadataOnFileCreated(FileSystemEventArgs e)
         {
-            var fileInfo = new FileInfo(e.FullPath);
-            if (fileInfo.Exists)
-            {
-                long fileSizeMB = fileInfo.Length / DataConstants.BytesToMbFactor;
-                _activity.MegabytesCopied += fileSizeMB;
-                _activity.FilesCopied.Add(e.FullPath);
+            //var fileInfo = new FileInfo(e.FullPath);
+            //if (fileInfo.Exists)
+            //{
+            //    long fileSizeMB = fileInfo.Length / DataConstants.BytesToMbFactor;
+            //    _activity.MegabytesCopied += fileSizeMB;
+            //    _activity.FilesCopied.Add(e.FullPath);
 
-                // Actualizar capacidad disponible
-                RefreshFinalAvailableSpace();
+            //    // Actualizar capacidad disponible
+            //    RefreshFinalAvailableSpace();
+            //}
+            // 1. Registramos el nombre del archivo inmediatamente
+            _activity.FilesCopied.Add(e.FullPath);
+
+            // 2. En lugar de leer fileInfo.Length (que suele ser 0 al empezar la copia),
+            // calculamos cuánto espacio ha DISMINUIDO en la unidad desde la última operación.
+            try
+            {
+                var driveInfo = new DriveInfo(_driveLetter);
+                if (driveInfo.IsReady)
+                {
+                    long currentAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
+
+                    // Si el espacio actual es MENOR que el último registrado, es que se ha ocupado espacio.
+                    long spaceOccupiedMB = _activity.FinalAvailableMB - currentAvailableMB;
+
+                    if (spaceOccupiedMB > 0)
+                    {
+                        _activity.MegabytesCopied += spaceOccupiedMB;
+                    }
+
+                    // Actualizamos el marcador de posición para la siguiente operación
+                    _activity.FinalAvailableMB = currentAvailableMB;
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning(ex, Messages.Watcher.DriveException, _driveLetter);
             }
         }
 
@@ -251,35 +279,63 @@ namespace DAM.Host.WindowsService.Monitoring
         /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo eliminado.</param>
         private void UpdateMetadataOnFileDeleted(FileSystemEventArgs e)
         {
-            // En el evento 'Deleted', no podemos obtener el tamaño del archivo, 
-            // por lo que nos basamos en el cambio de espacio libre.
+            //// En el evento 'Deleted', no podemos obtener el tamaño del archivo, 
+            //// por lo que nos basamos en el cambio de espacio libre.
+            //_activity.FilesDeleted.Add(e.FullPath);
+
+            //// Actualizar capacidad disponible para calcular el espacio borrado/diferencia
+            //try
+            //{
+            //    var driveInfo = new DriveInfo(_driveLetter);
+
+            //    if (driveInfo.IsReady)
+            //    {
+            //        long newAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
+            //        long spaceFreedMB = newAvailableMB - _activity.FinalAvailableMB;
+
+            //        if (spaceFreedMB > 0)
+            //        {
+            //            _activity.MegabytesDeleted += spaceFreedMB;
+            //        }
+            //        _activity.FinalAvailableMB = newAvailableMB;
+            //    }
+            //    else
+            //    {
+            //        // Si el disco no está listo, solo registramos el archivo borrado.
+            //        _logger.LogWarning(Messages.Watcher.DriveNotReadyDelete, _driveLetter);
+            //    }
+            //}
+            //catch (IOException ex)
+            //{
+            //    _logger.LogWarning(ex, Messages.Watcher.DriveNotReadyI0Delete, e.FullPath);
+            //}
+            //catch (Exception ex)
+            //{
+            //    _logger.LogError(ex, Messages.Watcher.DriveInfoError, _driveLetter);
+            //}
             _activity.FilesDeleted.Add(e.FullPath);
 
-            // Actualizar capacidad disponible para calcular el espacio borrado/diferencia
             try
             {
                 var driveInfo = new DriveInfo(_driveLetter);
-
                 if (driveInfo.IsReady)
                 {
-                    long newAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
-                    long spaceFreedMB = newAvailableMB - _activity.FinalAvailableMB;
+                    long currentAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
+
+                    // Si el espacio actual es MAYOR que el último registrado, es que se ha liberado espacio.
+                    long spaceFreedMB = currentAvailableMB - _activity.FinalAvailableMB;
 
                     if (spaceFreedMB > 0)
                     {
                         _activity.MegabytesDeleted += spaceFreedMB;
                     }
-                    _activity.FinalAvailableMB = newAvailableMB;
+
+                    _activity.FinalAvailableMB = currentAvailableMB;
                 }
                 else
                 {
-                    // Si el disco no está listo, solo registramos el archivo borrado.
                     _logger.LogWarning(Messages.Watcher.DriveNotReadyDelete, _driveLetter);
                 }
-            }
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, Messages.Watcher.DriveNotReadyI0Delete, e.FullPath);
             }
             catch (Exception ex)
             {
@@ -327,6 +383,8 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         public void FinalizeActivity()
         {
+            RefreshFinalAvailableSpace();
+
             _activity.ExtractedAt = DateTime.Now;
 
             _activity.SetTimeInsertedDuration();
