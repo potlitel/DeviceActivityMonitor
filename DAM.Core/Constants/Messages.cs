@@ -20,6 +20,9 @@
             public const string FileNotFound = "El archivo fue creado pero ya no existe en el momento del acceso I/O. Se ignora la actividad: {Path}";
             public const string FileIoError = "Fallo de I/O al acceder al archivo creado. Se ignorará esta actividad: {Path}";
             public const string UnexpectedError = "Error inesperado al procesar evento: {Path}";
+
+            public const string DebounceOcupied = "Estabilización: Detectada ocupación de {MB} MB en {DriveLetter}.";
+            public const string DebounceFreed = "Estabilización: Detectada liberación de {MB} MB en {DriveLetter}.";
         }
 
         public static class Persistence

@@ -16,6 +16,9 @@ namespace DAM.Host.WindowsService.Monitoring
         private DeviceActivity _activity = null!;
         private readonly ILogger<DeviceActivityWatcher> _logger;
 
+        private readonly System.Timers.Timer _debounceTimer;
+        private const int DebounceIntervalMs = 1500; // 1.5 segundos de "calma" para estabilizar el disco
+
         // Campos privados para la capacidad.
         private long _initialTotalCapacity;
         private long _initialAvailableSpace;
@@ -52,6 +55,13 @@ namespace DAM.Host.WindowsService.Monitoring
             InitializeDriveMetadata(driveLetter);
 
             SetupFileSystemWatcher(driveLetter);
+
+            // Configuración del Timer de Debounce
+            _debounceTimer = new System.Timers.Timer(DebounceIntervalMs)
+            {
+                AutoReset = false // Solo se dispara una vez tras el último evento
+            };
+            _debounceTimer.Elapsed += (s, e) => CalculateDiskSpaceDifferential();
         }
 
         /// <summary>
@@ -172,79 +182,8 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         private void OnFileCreated(object sender, FileSystemEventArgs e)
         {
-            try
-            {
-                UpdateMetadataOnFileCreated(e);
-            }
-            // 1. Manejo específico para archivos que desaparecen antes de poder leerlos
-            catch (FileNotFoundException ex)
-            {
-                _logger.LogWarning(ex, Messages.Watcher.FileNotFound, e.FullPath);
-            }
-            // 2. Manejo para errores de acceso o I/O que impiden obtener FileInfo
-            catch (IOException ex)
-            {
-                // Esto puede ocurrir si el archivo está siendo usado por otro proceso (bloqueo)
-                _logger.LogWarning(ex, Messages.Watcher.FileIoError, e.FullPath);
-            }
-            // 3. Manejo de cualquier otra excepción inesperada
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, Messages.Watcher.UnexpectedError, e.FullPath);
-            }
-            // IMPORTANTE: Si ocurre un fallo, el objeto _activity CONSERVA todos los datos acumulados
-            // hasta este punto, y el watcher continúa monitoreando eventos futuros.
-        }
-
-        /// <summary>
-        /// Actualiza los metadatos de la actividad de monitoreo cuando se crea un archivo.
-        /// </summary>
-        /// <remarks>
-        /// Esta función intenta obtener el tamaño del archivo recién creado para sumarlo al total de megabytes copiados.
-        /// Además, actualiza la capacidad libre final de la unidad para el seguimiento posterior de eliminaciones o creaciones.
-        /// Se incluye manejo de excepciones para fallos de I/O al acceder a la información del archivo o de la unidad.
-        /// </remarks>
-        /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo creado.</param>
-        private void UpdateMetadataOnFileCreated(FileSystemEventArgs e)
-        {
-            //var fileInfo = new FileInfo(e.FullPath);
-            //if (fileInfo.Exists)
-            //{
-            //    long fileSizeMB = fileInfo.Length / DataConstants.BytesToMbFactor;
-            //    _activity.MegabytesCopied += fileSizeMB;
-            //    _activity.FilesCopied.Add(e.FullPath);
-
-            //    // Actualizar capacidad disponible
-            //    RefreshFinalAvailableSpace();
-            //}
-            // 1. Registramos el nombre del archivo inmediatamente
             _activity.FilesCopied.Add(e.FullPath);
-
-            // 2. En lugar de leer fileInfo.Length (que suele ser 0 al empezar la copia),
-            // calculamos cuánto espacio ha DISMINUIDO en la unidad desde la última operación.
-            try
-            {
-                var driveInfo = new DriveInfo(_driveLetter);
-                if (driveInfo.IsReady)
-                {
-                    long currentAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
-
-                    // Si el espacio actual es MENOR que el último registrado, es que se ha ocupado espacio.
-                    long spaceOccupiedMB = _activity.FinalAvailableMB - currentAvailableMB;
-
-                    if (spaceOccupiedMB > 0)
-                    {
-                        _activity.MegabytesCopied += spaceOccupiedMB;
-                    }
-
-                    // Actualizamos el marcador de posición para la siguiente operación
-                    _activity.FinalAvailableMB = currentAvailableMB;
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogWarning(ex, Messages.Watcher.DriveException, _driveLetter);
-            }
+            RestartDebounce();
         }
 
         /// <summary>
@@ -253,128 +192,58 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         private void OnFileDeleted(object sender, FileSystemEventArgs e)
         {
-            try
-            {
-                UpdateMetadataOnFileDeleted(e);
-            }
-            // Capturamos cualquier excepción de I/O que pueda ocurrir durante la lectura de DriveInfo
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, Messages.Watcher.DeleteIoError, e.FullPath);
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, Messages.Watcher.UnexpectedError, e.FullPath);
-            }
-        }
-
-        /// <summary>
-        /// Actualiza los metadatos de la actividad de monitoreo cuando se elimina un archivo.
-        /// </summary>
-        /// <remarks>
-        /// Debido a las limitaciones del evento 'Deleted' de FileSystemWatcher (que no proporciona el tamaño del archivo),
-        /// esta función se basa en el **cambio en el espacio libre disponible** de la unidad para estimar la cantidad de espacio liberado.
-        /// Si el cálculo del espacio libre falla (por ejemplo, si la unidad no está lista o por un error de E/S), solo se registra el archivo eliminado.
-        /// </remarks>
-        /// <param name="e">Datos del evento del sistema de archivos, incluyendo la ruta completa del archivo eliminado.</param>
-        private void UpdateMetadataOnFileDeleted(FileSystemEventArgs e)
-        {
-            //// En el evento 'Deleted', no podemos obtener el tamaño del archivo, 
-            //// por lo que nos basamos en el cambio de espacio libre.
-            //_activity.FilesDeleted.Add(e.FullPath);
-
-            //// Actualizar capacidad disponible para calcular el espacio borrado/diferencia
-            //try
-            //{
-            //    var driveInfo = new DriveInfo(_driveLetter);
-
-            //    if (driveInfo.IsReady)
-            //    {
-            //        long newAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
-            //        long spaceFreedMB = newAvailableMB - _activity.FinalAvailableMB;
-
-            //        if (spaceFreedMB > 0)
-            //        {
-            //            _activity.MegabytesDeleted += spaceFreedMB;
-            //        }
-            //        _activity.FinalAvailableMB = newAvailableMB;
-            //    }
-            //    else
-            //    {
-            //        // Si el disco no está listo, solo registramos el archivo borrado.
-            //        _logger.LogWarning(Messages.Watcher.DriveNotReadyDelete, _driveLetter);
-            //    }
-            //}
-            //catch (IOException ex)
-            //{
-            //    _logger.LogWarning(ex, Messages.Watcher.DriveNotReadyI0Delete, e.FullPath);
-            //}
-            //catch (Exception ex)
-            //{
-            //    _logger.LogError(ex, Messages.Watcher.DriveInfoError, _driveLetter);
-            //}
             _activity.FilesDeleted.Add(e.FullPath);
-
-            try
-            {
-                var driveInfo = new DriveInfo(_driveLetter);
-                if (driveInfo.IsReady)
-                {
-                    long currentAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
-
-                    // Si el espacio actual es MAYOR que el último registrado, es que se ha liberado espacio.
-                    long spaceFreedMB = currentAvailableMB - _activity.FinalAvailableMB;
-
-                    if (spaceFreedMB > 0)
-                    {
-                        _activity.MegabytesDeleted += spaceFreedMB;
-                    }
-
-                    _activity.FinalAvailableMB = currentAvailableMB;
-                }
-                else
-                {
-                    _logger.LogWarning(Messages.Watcher.DriveNotReadyDelete, _driveLetter);
-                }
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError(ex, Messages.Watcher.DriveInfoError, _driveLetter);
-            }
+            RestartDebounce();
         }
 
         /// <summary>
-        /// Actualiza el espacio libre final disponible en la unidad y lo registra en la actividad actual.
+        /// Reinicia el temporizador de estabilización cada vez que ocurre un evento de E/S.
         /// </summary>
-        /// <remarks>
-        /// Este método consulta el estado actual del hardware a través de <see cref="DriveInfo"/>. 
-        /// Es fundamental para calcular la diferencia de espacio tras operaciones de creación o eliminación.
-        /// Si la unidad no está lista o se produce un error de E/S, el valor de 
-        /// <see cref="DeviceActivity.FinalAvailableMB"/> conservará su último valor conocido.
-        /// </remarks>
-        /// <exception cref="IOException">
-        /// Capturada internamente si hay un error de E/S al acceder a la unidad (ej. desconexión repentina).
-        /// </exception>
-        /// <exception cref="Exception">
-        /// Capturada internamente para cualquier error inesperado del sistema de archivos.
-        /// </exception>
-        private void RefreshFinalAvailableSpace()
+        private void RestartDebounce()
+        {
+            _debounceTimer.Stop();
+            _debounceTimer.Start();
+        }
+
+        /// <summary>
+        /// Lógica centralizada para calcular cuánto espacio cambió en la unidad tras un periodo de actividad.
+        /// </summary>
+        private void CalculateDiskSpaceDifferential()
         {
             try
             {
                 var driveInfo = new DriveInfo(_driveLetter);
-                if (driveInfo.IsReady)
+                if (!driveInfo.IsReady)
                 {
-                    _activity.FinalAvailableMB = driveInfo.AvailableFreeSpace / (1024 * 1024);
+                    _logger.LogWarning(Messages.Watcher.DriveNotReady, _driveLetter);
+                    return;
                 }
-            }
-            catch (IOException ex)
-            {
-                _logger.LogWarning(ex, Messages.Watcher.DriveIOException, _driveLetter);
+
+                long currentAvailableMB = driveInfo.AvailableFreeSpace / DataConstants.BytesToMbFactor;
+
+                // Diferencia absoluta entre lo que teníamos y lo que hay ahora
+                long difference = currentAvailableMB - _activity.FinalAvailableMB;
+
+                if (difference < 0) // El espacio DISMINUYÓ (Copia)
+                {
+                    long mbCopied = Math.Abs(difference);
+                    _activity.MegabytesCopied += mbCopied;
+                    _logger.LogDebug(Messages.Watcher.DebounceOcupied, mbCopied, _driveLetter);
+                }
+                else if (difference > 0) // El espacio AUMENTÓ (Eliminación)
+                {
+                    long mbFreed = difference;
+                    _activity.MegabytesDeleted += mbFreed;
+
+                    _logger.LogDebug(Messages.Watcher.DebounceFreed, mbFreed, _driveLetter);
+                }
+
+                // Sincronizamos el estado final
+                _activity.FinalAvailableMB = currentAvailableMB;
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, Messages.Watcher.DriveException, _driveLetter);
+                _logger.LogWarning(ex, Messages.Watcher.DriveException, _driveLetter);
             }
         }
 
@@ -383,13 +252,17 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         public void FinalizeActivity()
         {
-            RefreshFinalAvailableSpace();
+            // 1. Detenemos el timer para evitar que se ejecute en segundo plano después de finalizar
+            _debounceTimer.Stop();
+
+            // 2. FORZAMOS el cálculo diferencial final AHORA MISMO.
+            // Esto capturará los últimos cambios de espacio antes de cerrar la actividad.
+            CalculateDiskSpaceDifferential();
 
             _activity.ExtractedAt = DateTime.Now;
-
             _activity.SetTimeInsertedDuration();
 
-            // Reportar la actividad completada al servicio principal
+            // Reportar la actividad completada
             ActivityCompleted?.Invoke(_activity);
         }
 
@@ -398,6 +271,7 @@ namespace DAM.Host.WindowsService.Monitoring
         /// </summary>
         public void Dispose()
         {
+            _debounceTimer.Dispose();
             _watcher.Dispose();
             GC.SuppressFinalize(this);
         }
