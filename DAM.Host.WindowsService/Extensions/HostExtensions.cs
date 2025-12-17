@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Interfaces;
+using DAM.Core.Settings;
 using DAM.Host.WindowsService.Monitoring;
 using DAM.Host.WindowsService.Monitoring.Interfaces;
 using DAM.Infrastructure.Persistence;
@@ -107,6 +108,19 @@ namespace DAM.Host.WindowsService.Extensions
                 }
             }
             return host;
+        }
+
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="services"></param>
+        /// <returns>La colección de servicios para encadenamiento.</returns>
+        public static IServiceCollection AddApplicationSettings(this IServiceCollection services, IConfiguration configuration) {
+            
+            services.Configure<InvoiceSettings>(configuration.GetSection("InvoiceSettings"));
+
+            return services;
+
         }
     }
 }

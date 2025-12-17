@@ -1,12 +1,22 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.Constants;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
+using DAM.Core.Settings;
+using Microsoft.Extensions.Options;
 
 namespace DAM.Infrastructure.Persistence
 {
     public class FixedPriceInvoiceCalculator : IInvoiceCalculator
     {
         // Precio fijo por archivo copiado (ficticio)
-        private const decimal PRICE_PER_FILE = 0.05m;
+        //private const decimal PRICE_PER_FILE = 0.05m;
+        private readonly decimal _pricePerFile;
+
+        public FixedPriceInvoiceCalculator(IOptions<InvoiceSettings> settings)
+        {
+            // Obtenemos el valor desde la configuración inyectada
+            _pricePerFile = settings.Value.PricePerFile;
+        }
 
         /// <inheritdoc/>
         public Invoice CalculateInvoice(DeviceActivity activity)
@@ -26,7 +36,7 @@ namespace DAM.Infrastructure.Persistence
                 // Número de archivos por los que realmente se cobra
                 int filesToBillCount = survivingFiles.Count;
 
-                decimal total = filesToBillCount * PRICE_PER_FILE;
+                decimal total = filesToBillCount * _pricePerFile;
 
                 // La descripción debe reflejar el cálculo
                 return new Invoice
@@ -35,7 +45,8 @@ namespace DAM.Infrastructure.Persistence
                     // Usamos ExtractedAt, pues la factura se genera al finalizar la actividad
                     Timestamp = activity.ExtractedAt ?? DateTime.UtcNow,
                     TotalAmount = total,
-                    Description = $"Factura por {filesToBillCount} archivo(s) neto(s) (Copiados: {copiedFiles.Count} - Eliminados: {deletedFiles.Count}). Costo: {PRICE_PER_FILE:C} c/u."
+                    //Description = $"Factura por {filesToBillCount} archivo(s) neto(s) (Copiados: {copiedFiles.Count} - Eliminados: {deletedFiles.Count}). Costo: {PRICE_PER_FILE:C} c/u."
+                    Description = string.Format(Messages.Invoice.DescriptionFormat, filesToBillCount, copiedFiles.Count, deletedFiles.Count, _pricePerFile)
                 };
             }
             else

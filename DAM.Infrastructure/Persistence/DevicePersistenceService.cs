@@ -1,10 +1,8 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.Constants;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
-using System;
-using System.Collections.Generic;
-using System.Text;
 
 namespace DAM.Infrastructure.Persistence
 {
@@ -38,11 +36,11 @@ namespace DAM.Infrastructure.Persistence
                         SerialNumber = serialNumber,
                         Timestamp = DateTime.UtcNow
                     });
-                    _logger.LogInformation("Conexión registrada en BD para {SN}.", serialNumber);
+                    _logger.LogInformation(Messages.Persistence.PresenceSaved, serialNumber);
                 }
                 catch (Exception ex)
                 {
-                    _logger.LogError(ex, "FALLO: No se pudo registrar la presencia del dispositivo {SN} al conectar.", serialNumber);
+                    _logger.LogError(ex, Messages.Persistence.PresenceFailed, serialNumber);
                 }
             }
         }
@@ -115,13 +113,13 @@ namespace DAM.Infrastructure.Persistence
                 {
                     await storageService.StoreInvoiceAsync(invoice);
 
-                    _logger.LogInformation("Factura de {Monto:C} calculada y persistida para {SN}.",
+                    _logger.LogInformation(Messages.Persistence.InvoiceSaved,
                                            invoice.TotalAmount, invoice.SerialNumber);
                 }
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.", invoice.SerialNumber);
+                _logger.LogError(ex, Messages.Persistence.InvoiceFailed, invoice.SerialNumber);
             }
         }
     }

@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.Constants;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 
@@ -36,7 +37,7 @@ namespace DAM.Infrastructure.Persistence
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar DeviceActivity en la BD.");
+                _logger.LogError(ex, Messages.Repository.SaveActivityError);
                 // Loggear fallo, pero el servicio no debe caer por esto.
                 throw;
             }
@@ -52,7 +53,7 @@ namespace DAM.Infrastructure.Persistence
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar ServiceEvent en la BD.");
+                _logger.LogError(ex, Messages.Repository.SavePresenceError);
                 throw;
             }
         }
@@ -67,7 +68,7 @@ namespace DAM.Infrastructure.Persistence
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar Invoice en la BD.");
+                _logger.LogError(ex, Messages.Repository.SaveInvoiceError);
                 throw;
             }
         }
@@ -82,7 +83,7 @@ namespace DAM.Infrastructure.Persistence
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, "Error al guardar ServiceEvent en la BD.");
+                _logger.LogError(ex, Messages.Repository.SaveEventError);
                 throw;
             }
         }

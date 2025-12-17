@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.Constants;
+using DAM.Core.Entities;
 using DAM.Host.WindowsService.Monitoring.Interfaces;
 using System.Management;
 
@@ -195,7 +196,7 @@ namespace DAM.Host.WindowsService.Monitoring
             try
             {
                 // La consulta busca el Physical Media asociado al Logical Disk.
-                string queryPhysicalMedia = $"ASSOCIATORS OF {{Win32_LogicalDisk.DeviceID='{driveLetter}'}} WHERE AssocClass = Win32_LogicalDiskToPartition";
+                string queryPhysicalMedia = string.Format(WmiQueries.LogicalDiskToPartition, driveLetter);
 
                 using (var searcher = new ManagementObjectSearcher(queryPhysicalMedia))
                 {
@@ -228,7 +229,8 @@ namespace DAM.Host.WindowsService.Monitoring
                                             string pnpID = disk["PNPDeviceID"]?.ToString() ?? "N/A";
                                             string signature = disk["Signature"]?.ToString() ?? "N/A";
                                             // Retorna un identificador compuesto robusto si el SN directo falla.
-                                            return $"PNP_{pnpID}_{signature}";
+                                            //return $"PNP_{pnpID}_{signature}";
+                                            return $"{DataConstants.PnpPrefix}{pnpID}_{signature}";
                                         }
                                     }
                                 }
@@ -245,7 +247,8 @@ namespace DAM.Host.WindowsService.Monitoring
 
             // Si todo falla (incluyendo la excepción try/catch), genera un identificador único de fallback.
             // Esto asegura que NUNCA se repita UNKNOWN_WMI.
-            return $"WMI_FAIL_{Guid.NewGuid().ToString()}";
+            //return $"WMI_FAIL_{Guid.NewGuid().ToString()}";
+            return $"{DataConstants.WmiFailPrefix}{Guid.NewGuid()}";
         }
 
         /// <summary>

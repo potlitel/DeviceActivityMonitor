@@ -29,6 +29,8 @@ public class Program
 
                 // Lógica de Monitoreo y Host (Worker)
                 services.AddDeviceMonitoringHost();
+
+                services.AddApplicationSettings(hostContext.Configuration);
             })
             .Build();
 
