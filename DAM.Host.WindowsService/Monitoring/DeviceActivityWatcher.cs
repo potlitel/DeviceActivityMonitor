@@ -1,7 +1,9 @@
 ﻿using DAM.Core.Constants;
 using DAM.Core.Entities;
+using DAM.Core.Settings;
 using DAM.Host.WindowsService.Monitoring.Interfaces;
 using DAM.Infrastructure.Utils;
+using Microsoft.Extensions.Options;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
@@ -17,7 +19,8 @@ namespace DAM.Host.WindowsService.Monitoring
         private readonly ILogger<DeviceActivityWatcher> _logger;
 
         private readonly System.Timers.Timer _debounceTimer;
-        private const int DebounceIntervalMs = 1500; // 1.5 segundos de "calma" para estabilizar el disco
+        //private const int DebounceIntervalMs = 1500; // 1.5 segundos de "calma" para estabilizar el disco
+        private readonly int _debounceIntervalMs;
 
         // Campos privados para la capacidad.
         private long _initialTotalCapacity;
@@ -47,17 +50,22 @@ namespace DAM.Host.WindowsService.Monitoring
         /// <item>Configuración y suscripción del <see cref="FileSystemWatcher"/>.</item>
         /// </list>
         /// </remarks>
-        public DeviceActivityWatcher(string driveLetter, ILogger<DeviceActivityWatcher> logger)
+        public DeviceActivityWatcher(string driveLetter, IOptions<StorageSettings> storageSettings, ILogger<DeviceActivityWatcher> logger)
         {
             _driveLetter = driveLetter;
             _logger = logger;
+
+            // Obtenemos el valor de la configuración
+            _debounceIntervalMs = storageSettings.Value.DebounceIntervalMs > 0
+                                  ? storageSettings.Value.DebounceIntervalMs
+                                  : 1500; // Valor por defecto si no está en el JSON
 
             InitializeDriveMetadata(driveLetter);
 
             SetupFileSystemWatcher(driveLetter);
 
             // Configuración del Timer de Debounce
-            _debounceTimer = new System.Timers.Timer(DebounceIntervalMs)
+            _debounceTimer = new System.Timers.Timer(_debounceIntervalMs)
             {
                 AutoReset = false // Solo se dispara una vez tras el último evento
             };

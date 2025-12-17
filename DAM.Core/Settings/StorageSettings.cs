@@ -23,5 +23,14 @@
         /// mientras que uno muy bajo puede causar falsos negativos en redes lentas.
         /// </value>
         public int ApiTimeoutSeconds { get; set; }
+
+        /// <summary>
+        /// Tiempo de espera en milisegundos para estabilizar los eventos de E/S del sistema de archivos.
+        /// </summary>
+        /// <remarks>
+        /// Un valor mayor (ej. 2000) es más seguro para copias masivas, 
+        /// mientras que uno menor (ej. 500) hace que el registro sea más rápido pero propenso a errores de bloqueo.
+        /// </remarks>
+        public int DebounceIntervalMs { get; set; }
     }
 }

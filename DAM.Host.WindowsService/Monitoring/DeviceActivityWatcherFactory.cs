@@ -1,4 +1,6 @@
-﻿using DAM.Host.WindowsService.Monitoring.Interfaces;
+﻿using DAM.Core.Settings;
+using DAM.Host.WindowsService.Monitoring.Interfaces;
+using Microsoft.Extensions.Options;
 
 namespace DAM.Host.WindowsService.Monitoring
 {
@@ -13,11 +15,24 @@ namespace DAM.Host.WindowsService.Monitoring
     /// </summary>
     public class DeviceActivityWatcherFactory : IDeviceActivityWatcherFactory
     {
+        private readonly ILoggerFactory _loggerFactory;
+        private readonly IOptions<StorageSettings> _storageSettings;
+
+        public DeviceActivityWatcherFactory(ILoggerFactory loggerFactory, IOptions<StorageSettings> storageSettings)
+        {
+            _loggerFactory = loggerFactory;
+            _storageSettings = storageSettings;
+        }
+
         /// <inheritdoc/>
         public IDeviceActivityWatcher Create(string driveLetter, ILogger<DeviceActivityWatcher> logger)
         {
             // Retorna la implementación concreta original
-            return new DeviceActivityWatcher(driveLetter, logger);
+            return new DeviceActivityWatcher(
+            driveLetter,
+            _storageSettings,
+            _loggerFactory.CreateLogger<DeviceActivityWatcher>()
+        );
         }
     }
 }
