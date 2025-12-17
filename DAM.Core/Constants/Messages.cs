@@ -5,12 +5,20 @@
         public static class Watcher
         {
             public const string DriveNotReady = "Drive {Drive} not ready upon insertion. Activity logging may be incomplete.";
+            public const string DriveIOException = "Fallo de E/S al leer la capacidad disponible del Drive {DriveLetter} después de la creación del archivo. Se omite la actualización de FinalAvailableMB.";
+            public const string DriveException = "Error inesperado al intentar acceder a DriveInfo después de la creación. Drive: {DriveLetter}";
+
+            public const string DriveNotReadyDelete = "Drive {DriveLetter} no estaba listo durante el evento de eliminación para calcular el espacio libre.";
+            public const string DriveNotReadyI0Delete = "Fallo de I/O al acceder a DriveInfo durante la eliminación. Se ignora el cálculo de espacio: {Path}";
+            public const string DriveInfoError = "Error inesperado al intentar acceder a DriveInfo durante la eliminación. Drive: {DriveLetter}";
+            
             public const string WatcherCreationError = "Error al crear FileSystemWatcher para la unidad {DriveLetter}. El monitoreo de E/S no estará activo.";
-            public const string IoErrorFatal = "Error I/O fatal en FileSystemWatcher para {DriveLetter}. Intentando recuperar.";
-            public const string RecoverySuccess = "FileSystemWatcher para {DriveLetter} recuperado exitosamente.";
-            public const string RecoveryFailed = "Fallo al recuperar FileSystemWatcher para {DriveLetter}. Monitoreo de E/S perdido.";
-            public const string FileMissing = "El archivo fue creado pero ya no existe en el momento del acceso I/O. Se ignora la actividad: {Path}";
-            public const string IoAccessError = "Fallo de I/O al acceder al archivo creado. Se ignorará esta actividad: {Path}";
+            public const string WatcherIoFatal = "Error I/O fatal en FileSystemWatcher para {DriveLetter}. Intentando recuperar.";
+            public const string WatcherRecovered = "FileSystemWatcher para {DriveLetter} recuperado exitosamente.";
+            public const string WatcherRecoverFailed = "Fallo al recuperar FileSystemWatcher para {DriveLetter}. Monitoreo de E/S perdido.";
+            public const string DeleteIoError = "Fallo de I/O al procesar evento de eliminación. Se ignorará el cálculo de espacio: {Path}";
+            public const string FileNotFound = "El archivo fue creado pero ya no existe en el momento del acceso I/O. Se ignora la actividad: {Path}";
+            public const string FileIoError = "Fallo de I/O al acceder al archivo creado. Se ignorará esta actividad: {Path}";
             public const string UnexpectedError = "Error inesperado al procesar evento: {Path}";
         }
 
