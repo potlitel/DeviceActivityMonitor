@@ -1,4 +1,5 @@
-﻿using DAM.Core.Interfaces;
+﻿using DAM.Core.Constants;
+using DAM.Core.Interfaces;
 using DAM.Core.Settings;
 using DAM.Host.WindowsService.Monitoring;
 using DAM.Host.WindowsService.Monitoring.Interfaces;
@@ -23,7 +24,9 @@ namespace DAM.Host.WindowsService.Extensions
         public static IServiceCollection AddSqlitePersistence(this IServiceCollection services, IConfiguration configuration)
         {
             // El path de la base de datos se resuelve en el directorio de la aplicación para que sea portátil.
-            string dbPath = Path.Combine(AppContext.BaseDirectory, configuration["Database:Name"] ?? "DeviceActivityMonitor.db");
+            //string dbPath = Path.Combine(AppContext.BaseDirectory, configuration["Database:Name"] ?? "DeviceActivityMonitor.db");
+            string dbName = configuration["Database:Name"] ?? DataConstants.DefaultDbName;
+            string dbPath = Path.Combine(AppContext.BaseDirectory, dbName);
 
             services.AddDbContext<DeviceActivityDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
@@ -45,7 +48,8 @@ namespace DAM.Host.WindowsService.Extensions
         /// <returns>La colección de servicios para encadenamiento.</returns>
         public static IServiceCollection AddWebApiIntegration(this IServiceCollection services, IConfiguration configuration)
         {
-            var apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000/";
+            //var apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? "http://localhost:5000/";
+            var apiBaseUrl = configuration["ApiSettings:BaseUrl"] ?? DataConstants.DefaultApiUrl;
 
             // HttpClient para el Checker de Disponibilidad de API
             services.AddHttpClient<IApiStatusChecker, ApiStatusChecker>(client =>
@@ -118,6 +122,7 @@ namespace DAM.Host.WindowsService.Extensions
         public static IServiceCollection AddApplicationSettings(this IServiceCollection services, IConfiguration configuration) {
             
             services.Configure<InvoiceSettings>(configuration.GetSection("InvoiceSettings"));
+            services.Configure<StorageSettings>(configuration.GetSection("StorageSettings"));
 
             return services;
 

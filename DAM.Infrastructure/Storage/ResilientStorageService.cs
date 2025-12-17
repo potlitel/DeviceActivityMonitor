@@ -1,6 +1,9 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.Constants;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
+using DAM.Core.Settings;
 using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Options;
 
 namespace DAM.Infrastructure.Storage
 {
@@ -21,7 +24,9 @@ namespace DAM.Infrastructure.Storage
         // Polling para re-chequear la API
         private bool _isApiAvailable = false;
         private DateTime _lastCheck = DateTime.MinValue;
-        private readonly TimeSpan _recheckInterval = TimeSpan.FromMinutes(1);
+        //private readonly TimeSpan _recheckInterval = TimeSpan.FromMinutes(1);
+        private readonly TimeSpan _recheckInterval;
+
 
         /// <summary>
         /// Inicializa una nueva instancia de <see cref="ResilientStorageService"/>.
@@ -34,12 +39,14 @@ namespace DAM.Infrastructure.Storage
             IApiStatusChecker apiChecker,
             LocalDbStorageService localService,
             ApiStorageService apiService,
-            ILogger<ResilientStorageService> logger)
+            ILogger<ResilientStorageService> logger,
+            IOptions<StorageSettings> settings)
         {
             _apiChecker = apiChecker;
             _localService = localService;
             _apiService = apiService;
             _logger = logger;
+            _recheckInterval = TimeSpan.FromMinutes(settings.Value.RecheckIntervalMinutes);
         }
 
         /// <summary>
@@ -57,12 +64,12 @@ namespace DAM.Infrastructure.Storage
 
             if (_isApiAvailable)
             {
-                _logger.LogInformation("Usando estrategia: Web API.");
+                _logger.LogInformation(Messages.Storage.UsingWebApi);
                 return _apiService;
             }
             else
             {
-                _logger.LogWarning("Usando estrategia: SQLite Local. Web API no disponible.");
+                _logger.LogWarning(Messages.Storage.UsingLocalSqlite);
                 // TODO: Aquí se añadiría la lógica de reintento de envío (Saga/Outbox Pattern)
                 return _localService;
             }
