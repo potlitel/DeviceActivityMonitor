@@ -30,12 +30,22 @@
         // Eventos especiales (Formateo, etc.)
         public string SpecialEvent { get; set; } = string.Empty;
 
-        // Historial de Presencia (para saber los días que ha venido anteriormente)
-        // Esto se manejaría como una query aparte o en la misma tabla con un Distinct en la fecha.
+        public ICollection<DevicePresence> PresenceHistory { get; set; } = [];
+
+        public ICollection<Invoice> Invoices { get; set; } = [];
 
         /// <summary>
-        /// Método para establecer el valor del campo 'TimeInserted' al finalizar
+        /// Establece la duración final de la actividad del dispositivo.
         /// </summary>
+        /// <remarks>
+        /// Este método se invoca cuando una <c>DeviceActivity</c> ha finalizado, 
+        /// independientemente de si las operaciones realizadas fueron de copiado/eliminado 
+        /// o de solo lectura. 
+        /// <para>
+        /// La asignación solo ocurre si existe un valor previo en <see cref="ExtractedAt"/>, 
+        /// asegurando la integridad de la métrica de tiempo.
+        /// </para>
+        /// </remarks>
         public void SetTimeInsertedDuration()
         {
             if (ExtractedAt.HasValue)

@@ -32,6 +32,12 @@ namespace DAM.Infrastructure.Migrations.Configurations
 
             // Define una longitud máxima para la descripción, permitiendo que sea opcional (nullable por defecto).
             builder.Property(e => e.Description).HasMaxLength(255);
+
+            // *** Relación con DeviceActivity (Uno a Muchos) ***
+            builder.HasOne(e => e.DeviceActivity)
+                   .WithMany(a => a.Invoices)
+                   .HasForeignKey(e => e.DeviceActivityId)
+                   .IsRequired();
         }
     }
 }

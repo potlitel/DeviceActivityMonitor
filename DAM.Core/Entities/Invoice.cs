@@ -1,9 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace DAM.Core.Entities
+﻿namespace DAM.Core.Entities
 {
+    /// <summary>
+    /// Entidad para registrar facturas relacionadas con la entidad DeviceActivity.
+    /// </summary>
     public class Invoice
     {
         public int Id { get; set; }
@@ -15,5 +14,9 @@ namespace DAM.Core.Entities
         public required decimal TotalAmount { get; set; }
 
         public required string Description { get; set; }
+
+        public int DeviceActivityId { get; set; }
+
+        public DeviceActivity DeviceActivity { get; set; } = null!;
     }
 }

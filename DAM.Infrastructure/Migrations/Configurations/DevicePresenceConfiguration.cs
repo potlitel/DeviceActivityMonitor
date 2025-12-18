@@ -12,6 +12,10 @@ namespace DAM.Infrastructure.Migrations.Configurations
             builder.Property(e => e.SerialNumber).IsRequired().HasMaxLength(50);
             builder.Property(e => e.Timestamp).IsRequired()
                    .HasColumnType("datetime");
+            builder.HasOne(e => e.DeviceActivity) 
+                   .WithMany(a => a.PresenceHistory) 
+                   .HasForeignKey(e => e.DeviceActivityId) 
+                   .IsRequired();
         }
     }
 }

@@ -12,5 +12,9 @@
         // La hora exacta en que se observó la presencia (Fecha + Hora)
         // Esto permite múltiples registros por día.
         public required DateTime Timestamp { get; set; }
+
+        public int DeviceActivityId { get; set; }
+
+        public DeviceActivity DeviceActivity { get; set; } = null!;
     }
 }
