@@ -17,7 +17,7 @@ namespace DAM.Core.Interfaces
         /// Esta operación es asíncrona y debe ser tratada de forma transaccional para evitar duplicados 
         /// en ráfagas de conexión/desconexión rápidas.
         /// </remarks>
-        Task PersistPresenceAsync(string serialNumber);
+        Task PersistPresenceAsync(DeviceActivity activity);
 
         /// <summary>
         /// Almacena una actividad completa de un dispositivo, incluyendo archivos copiados y borrados.

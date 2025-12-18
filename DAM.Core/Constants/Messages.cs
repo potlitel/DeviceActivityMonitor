@@ -27,7 +27,7 @@
 
         public static class Persistence
         {
-            public const string PresenceSaved = "Conexión registrada en BD para {SN}.";
+            public const string PresenceSaved = "Presencia vinculada a Actividad ID: {Id}.";
             public const string PresenceFailed = "FALLO: No se pudo registrar la presencia del dispositivo {SN} al conectar.";
             public const string ActivitySaved = "Actividad del dispositivo {SN} persistida exitosamente.";
             public const string ActivityCritical = "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.";
@@ -45,6 +45,7 @@
         public static class Repository
         {
             public const string SaveActivityError = "Error al guardar DeviceActivity en la BD.";
+            public const string UpdateActivityError = "Error al actualizar DeviceActivity en la BD.";
             public const string SavePresenceError = "Error al guardar DevicePresence en la BD.";
             public const string SaveInvoiceError = "Error al guardar Invoice en la BD.";
             public const string SaveEventError = "Error al guardar ServiceEvent en la BD.";

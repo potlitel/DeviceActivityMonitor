@@ -15,7 +15,9 @@ namespace DAM.Core.Interfaces
         /// </summary>
         /// <param name="activity">El objeto DeviceActivity a guardar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
-        Task AddActivityAsync(DeviceActivity activity);
+        Task<int> AddActivityAsync(DeviceActivity activity);
+
+        Task UpdateActivityAsync(DeviceActivity activity);
 
         /// <summary>
         /// Agrega un evento del servicio a la persistencia.
@@ -37,7 +39,5 @@ namespace DAM.Core.Interfaces
         /// <param name="invoice">El objeto Invoice a guardar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task AddInvoiceAsync(Invoice invoice);
-
-        // ... otros métodos de consulta ...
     }
 }

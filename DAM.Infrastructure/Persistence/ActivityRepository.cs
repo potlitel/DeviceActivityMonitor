@@ -28,16 +28,32 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task AddActivityAsync(DeviceActivity activity)
+        public async Task<int> AddActivityAsync(DeviceActivity activity)
         {
             try
             {
                 _context.DeviceActivities.Add(activity);
                 await _context.SaveChangesAsync();
+                return activity.Id;
             }
             catch (Exception ex)
             {
                 _logger.LogError(ex, Messages.Repository.SaveActivityError);
+                // Loggear fallo, pero el servicio no debe caer por esto.
+                throw;
+            }
+        }
+
+        public async Task UpdateActivityAsync(DeviceActivity activity)
+        {
+            try
+            {
+                _context.DeviceActivities.Update(activity);
+                await _context.SaveChangesAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.Repository.UpdateActivityError);
                 // Loggear fallo, pero el servicio no debe caer por esto.
                 throw;
             }

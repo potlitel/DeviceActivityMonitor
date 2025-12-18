@@ -4,6 +4,7 @@ using DAM.Core.Interfaces;
 using DAM.Core.Settings;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
+using static DAM.Core.Constants.Messages;
 
 namespace DAM.Infrastructure.Storage
 {
@@ -97,10 +98,16 @@ namespace DAM.Infrastructure.Storage
         }
 
         /// <inheritdoc/>
-        public async Task StoreInvoiceAsync(Invoice invoice)
+        public async Task StoreInvoiceAsync(Core.Entities.Invoice invoice)
         {
             var strategy = await GetCurrentStorageStrategy();
             await strategy.StoreInvoiceAsync(invoice);
+        }
+
+        public async Task UpdateActivityAsync(DeviceActivity activity)
+        {
+            var strategy = await GetCurrentStorageStrategy();
+            await strategy.UpdateActivityAsync(activity);
         }
     }
 }

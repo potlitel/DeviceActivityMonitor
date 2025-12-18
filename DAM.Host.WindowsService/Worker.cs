@@ -97,7 +97,7 @@ public class Worker : BackgroundService
                 try
                 {
                     // 2. REGISTRAR PRESENCIA (Llama al método que usa scope y persiste)
-                    await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity.SerialNumber);
+                    await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity);
                     _logger.LogInformation(WorkerMessages.Log.ActivityProcessed, watcher.CurrentActivity.SerialNumber);
                 }
                 catch (Exception ex)

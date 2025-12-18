@@ -21,27 +21,27 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task PersistPresenceAsync(string serialNumber)
+        public async Task PersistPresenceAsync(DeviceActivity activity)
         {
-            // La lógica de creación de scope y acceso a repositorios va AQUÍ.
-            using (var scope = _scopeFactory.CreateScope())
-            {
-                // El servicio IActivityStorageService se obtiene y se usa dentro del scope
-                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+            using var scope = _scopeFactory.CreateScope();
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
 
-                try
+            try
+            {
+                await storageService.StoreActivityAsync(activity);
+
+                await storageService.StoreDevicePresenceAsync(new DevicePresence
                 {
-                    await storageService.StoreDevicePresenceAsync(new DevicePresence
-                    {
-                        SerialNumber = serialNumber,
-                        Timestamp = DateTime.UtcNow
-                    });
-                    _logger.LogInformation(Messages.Persistence.PresenceSaved, serialNumber);
-                }
-                catch (Exception ex)
-                {
-                    _logger.LogError(ex, Messages.Persistence.PresenceFailed, serialNumber);
-                }
+                    DeviceActivityId = activity.Id,
+                    SerialNumber = activity.SerialNumber,
+                    Timestamp = DateTime.UtcNow
+                });
+
+                _logger.LogInformation(Messages.Persistence.PresenceSaved, activity.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.Persistence.PresenceFailed, activity.Id);
             }
         }
 
@@ -49,46 +49,40 @@ namespace DAM.Infrastructure.Persistence
         public async Task PersistActivityAsync(DeviceActivity activity)
         {
             // La lógica de creación de scope y acceso a repositorios va AQUÍ.
-            using (var scope = _scopeFactory.CreateScope())
+            using var scope = _scopeFactory.CreateScope();
+            // El servicio IActivityStorageService se obtiene y se usa dentro del scope
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+            try
             {
-                // El servicio IActivityStorageService se obtiene y se usa dentro del scope
-                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
-
-                try
-                {
+                if (activity.Id == 0)
                     await storageService.StoreActivityAsync(activity);
+                else
+                    await storageService.UpdateActivityAsync(activity);
 
-                    _logger.LogInformation(Messages.Persistence.ActivitySaved, activity.SerialNumber);
-                }
-                catch (Exception ex)
-                {
-                    // El log crítico es importante mantenerlo.
-                    _logger.LogCritical(ex, Messages.Persistence.ActivityCritical, activity.SerialNumber);
-                }
-            } // El ámbito se desecha aquí.
+                _logger.LogInformation("Actividad {Id} actualizada/guardada.", activity.Id);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogCritical(ex, Messages.Persistence.ActivityCritical, activity.SerialNumber);
+            }
         }
 
         /// <inheritdoc/>
         public async Task PersistServiceEventAsync(ServiceEvent serviceEvent)
         {
-            using (var scope = _scopeFactory.CreateScope())
+            using var scope = _scopeFactory.CreateScope();
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+            try
             {
-                // Se obtiene el servicio de almacenamiento Scoped dentro del ámbito.
-                var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+                await storageService.StoreServiceEventAsync(serviceEvent);
 
-                try
-                {
-                    // Registra el evento de servicio (START/STOP)
-                    await storageService.StoreServiceEventAsync(serviceEvent);
-
-                    _logger.LogInformation(Messages.Persistence.EventSaved, serviceEvent.EventType);
-                }
-                catch (Exception ex)
-                {
-                    // Se registra un error si la persistencia del evento falla.
-                    _logger.LogError(ex, Messages.Persistence.EventFailed, serviceEvent.EventType);
-                    // NOTA: No re-lanzamos la excepción ya que el evento debe continuar su flujo.
-                }
+                _logger.LogInformation(Messages.Persistence.EventSaved, serviceEvent.EventType);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.Persistence.EventFailed, serviceEvent.EventType);
             }
         }
 
@@ -98,19 +92,17 @@ namespace DAM.Infrastructure.Persistence
             Invoice invoice = null!;
             if (activity.FilesCopied.Count > 0)
             {
-                invoice = _invoiceCalculator.CalculateInvoice(activity);
+                invoice = _invoiceCalculator.CalculateInvoice(activity)!;
             }
 
-            // 2. Crear un ámbito (scope) para la transacción de persistencia
             using var scope = _scopeFactory.CreateScope();
-            // 3. Obtener el servicio de almacenamiento Scoped (que tiene el DbContext)
             var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
 
             try
             {
-                // 4. Persistir la factura.
                 if (invoice != null)
                 {
+                    invoice.DeviceActivityId = activity.Id;
                     await storageService.StoreInvoiceAsync(invoice);
 
                     _logger.LogInformation(Messages.Persistence.InvoiceSaved,

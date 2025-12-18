@@ -9,6 +9,6 @@ namespace DAM.Core.Interfaces
         /// </summary>
         /// <param name="activity">La entidad de actividad que contiene datos iniciales (ej: archivos copiados).</param>
         /// <returns>Una nueva entidad Invoice con el cálculo.</returns>
-        Invoice CalculateInvoice(DeviceActivity activity);
+        Invoice? CalculateInvoice(DeviceActivity activity);
     }
 }

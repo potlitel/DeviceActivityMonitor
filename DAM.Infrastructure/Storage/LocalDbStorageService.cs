@@ -42,5 +42,11 @@ namespace DAM.Infrastructure.Storage
         {
             return _repository.AddServiceEventAsync(serviceEvent);
         }
+
+        /// <inheritdoc/>
+        public Task UpdateActivityAsync(DeviceActivity activity)
+        {
+            return _repository.UpdateActivityAsync(activity);
+        }
     }
 }

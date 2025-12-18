@@ -57,5 +57,12 @@ namespace DAM.Infrastructure.Storage
             var response = await _httpClient.PostAsJsonAsync("api/serviceevents", serviceEvent);
             response.EnsureSuccessStatusCode();
         }
+
+        public async Task UpdateActivityAsync(DeviceActivity activity)
+        {
+            // Endpoint POST para guardar eventos del servicio MODIFICAR!!!!
+            var response = await _httpClient.PostAsJsonAsync("api/serviceevents", activity);
+            response.EnsureSuccessStatusCode();
+        }
     }
 }

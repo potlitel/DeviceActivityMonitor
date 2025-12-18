@@ -18,6 +18,13 @@ namespace DAM.Core.Interfaces
         Task StoreActivityAsync(DeviceActivity activity);
 
         /// <summary>
+        /// Actualiza una actividad de dispositivo, decidiendo la estrategia de persistencia (Local/Remoto).
+        /// </summary>
+        /// <param name="activity">La actividad del dispositivo a actualizar.</param>
+        /// <returns>Tarea asíncrona completada.</returns>
+        Task UpdateActivityAsync(DeviceActivity activity);
+
+        /// <summary>
         /// Almacena un evento del servicio, decidiendo la estrategia de persistencia (Local/Remoto).
         /// </summary>
         /// <param name="serviceEvent">El evento del servicio a almacenar.</param>

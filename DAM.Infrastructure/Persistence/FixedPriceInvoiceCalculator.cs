@@ -19,7 +19,7 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public Invoice CalculateInvoice(DeviceActivity activity)
+        public Invoice? CalculateInvoice(DeviceActivity activity)
         {
             // 1. Obtener el número de archivos copiados.
             // NOTA: FilesCopied es una lista de strings; usamos su Count.
