@@ -11,12 +11,15 @@ namespace DAM.Core.Interfaces
     public interface IActivityRepository
     {
         /// <summary>
-        /// Agrega una nueva actividad de dispositivo a la persistencia.
+        /// Registra una nueva actividad de dispositivo en el contexto de persistencia.
         /// </summary>
-        /// <param name="activity">El objeto DeviceActivity a guardar.</param>
-        /// <returns>Tarea asíncrona completada.</returns>
-        Task<int> AddActivityAsync(DeviceActivity activity);
+        /// <param name="activity">El objeto DeviceActivity a registrar.</param>
+        /// <returns>Tarea asíncrona que representa la operación de registro en el contexto.</returns>
+        Task AddActivityAsync(DeviceActivity activity);
 
+        /// <summary>
+        /// Marca una actividad existente como modificada en el contexto.
+        /// </summary>
         Task UpdateActivityAsync(DeviceActivity activity);
 
         /// <summary>

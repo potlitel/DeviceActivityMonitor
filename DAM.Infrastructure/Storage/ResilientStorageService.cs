@@ -79,35 +79,36 @@ namespace DAM.Infrastructure.Storage
         /// <inheritdoc/>
         public async Task StoreActivityAsync(DeviceActivity activity)
         {
-            var strategy = await GetCurrentStorageStrategy();
-            await strategy.StoreActivityAsync(activity);
+            await (await GetCurrentStorageStrategy()).StoreActivityAsync(activity);
         }
 
         /// <inheritdoc/>
         public async Task StoreServiceEventAsync(ServiceEvent serviceEvent)
         {
-            var strategy = await GetCurrentStorageStrategy();
-            await strategy.StoreServiceEventAsync(serviceEvent);
+            await (await GetCurrentStorageStrategy()).StoreServiceEventAsync(serviceEvent);
         }
 
         /// <inheritdoc/>
         public async Task StoreDevicePresenceAsync(DevicePresence presence)
         {
-            var strategy = await GetCurrentStorageStrategy();
-            await strategy.StoreDevicePresenceAsync(presence);
+            await (await GetCurrentStorageStrategy()).StoreDevicePresenceAsync(presence);
         }
 
         /// <inheritdoc/>
         public async Task StoreInvoiceAsync(Core.Entities.Invoice invoice)
         {
-            var strategy = await GetCurrentStorageStrategy();
-            await strategy.StoreInvoiceAsync(invoice);
+            await (await GetCurrentStorageStrategy()).StoreInvoiceAsync(invoice);
         }
-
+        
+        /// <inheritdoc/>
         public async Task UpdateActivityAsync(DeviceActivity activity)
         {
-            var strategy = await GetCurrentStorageStrategy();
-            await strategy.UpdateActivityAsync(activity);
+            await (await GetCurrentStorageStrategy()).UpdateActivityAsync(activity);
         }
+
+        public async Task BeginTransactionAsync() => await (await GetCurrentStorageStrategy()).BeginTransactionAsync();
+        public async Task CommitTransactionAsync() => await(await GetCurrentStorageStrategy()).CommitTransactionAsync();
+        public async Task RollbackTransactionAsync() => await (await GetCurrentStorageStrategy()).RollbackTransactionAsync();
+        public async Task SaveChangesAsync() => await (await GetCurrentStorageStrategy()).SaveChangesAsync();
     }
 }

@@ -25,6 +25,14 @@ namespace DAM.Infrastructure.Storage
             // Configurar base address del HttpClient en Program.cs
         }
 
+        // --- Métodos de Transacción (Operaciones NOOP - No Operation) ---
+        // En la API, la atomicidad se maneja en el servidor. 
+        // Aquí simplemente devolvemos Task.CompletedTask para no romper el flujo.
+        public Task BeginTransactionAsync() => Task.CompletedTask;
+        public Task CommitTransactionAsync() => Task.CompletedTask;
+        public Task RollbackTransactionAsync() => Task.CompletedTask;
+        public Task SaveChangesAsync() => Task.CompletedTask;
+
         /// <inheritdoc/>
         public async Task StoreActivityAsync(DeviceActivity activity)
         {

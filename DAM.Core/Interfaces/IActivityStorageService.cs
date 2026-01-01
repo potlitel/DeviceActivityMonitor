@@ -44,5 +44,11 @@ namespace DAM.Core.Interfaces
         /// <param name="invoice">La factura a almacenar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task StoreInvoiceAsync(Invoice invoice);
+
+        // Métodos para coordinar la transacción desde el orquestador
+        Task BeginTransactionAsync();
+        Task CommitTransactionAsync();
+        Task RollbackTransactionAsync();
+        Task SaveChangesAsync();
     }
 }

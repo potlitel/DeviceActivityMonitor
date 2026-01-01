@@ -28,13 +28,11 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task<int> AddActivityAsync(DeviceActivity activity)
+        public async Task AddActivityAsync(DeviceActivity activity)
         {
             try
             {
-                _context.DeviceActivities.Add(activity);
-                await _context.SaveChangesAsync();
-                return activity.Id;
+                await _context.DeviceActivities.AddAsync(activity);
             }
             catch (Exception ex)
             {
@@ -49,7 +47,7 @@ namespace DAM.Infrastructure.Persistence
             try
             {
                 _context.DeviceActivities.Update(activity);
-                await _context.SaveChangesAsync();
+                await Task.CompletedTask;
             }
             catch (Exception ex)
             {
@@ -64,8 +62,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                _context.DevicePresences.Add(presence);
-                await _context.SaveChangesAsync();
+                await _context.DevicePresences.AddAsync(presence);
             }
             catch (Exception ex)
             {
@@ -79,8 +76,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                _context.Invoices.Add(invoice);
-                await _context.SaveChangesAsync();
+                await _context.Invoices.AddAsync(invoice);
             }
             catch (Exception ex)
             {
@@ -94,8 +90,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                _context.ServiceEvents.Add(serviceEvent);
-                await _context.SaveChangesAsync();
+                await _context.ServiceEvents.AddAsync(serviceEvent);
             }
             catch (Exception ex)
             {

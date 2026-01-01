@@ -31,8 +31,9 @@ namespace DAM.Host.WindowsService.Extensions
             services.AddDbContext<DeviceActivityDbContext>(options =>
                 options.UseSqlite($"Data Source={dbPath}"));
 
-            // Se registra la capa de repositorio y la lógica de almacenamiento local.
             services.AddScoped<IActivityRepository, ActivityRepository>();
+            // Es vital que sea Scoped para que maneje la transacción del DbContext actual
+            services.AddScoped<IUnitOfWork, UnitOfWork>();
             services.AddSingleton<IDevicePersistenceService, DevicePersistenceService>();
             services.AddSingleton<IInvoiceCalculator, FixedPriceInvoiceCalculator>();
             services.AddScoped<LocalDbStorageService>();
@@ -64,7 +65,8 @@ namespace DAM.Host.WindowsService.Extensions
                 client.BaseAddress = new Uri(apiBaseUrl);
             });
 
-            // El servicio resiliente que alterna entre BD local y API remota.
+            // IMPORTANTE: ResilientStorageService(El servicio resiliente que alterna entre BD local y API remota.) debe ser Scoped porque
+            // depende de LocalDbStorageService (que usa el UoW/DbContext)
             services.AddScoped<IActivityStorageService, ResilientStorageService>();
 
             return services;
