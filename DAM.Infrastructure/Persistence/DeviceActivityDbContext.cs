@@ -31,16 +31,37 @@ namespace DAM.Infrastructure.Persistence
 
         /// <summary>
         /// Inicializa una nueva instancia de <see cref="DeviceActivityDbContext"/>.
+        /// Configura SQLite en modo WAL (Write-Ahead Logging) para alto rendimiento y concurrencia.
         /// </summary>
-        /// <param name="options">Opciones de configuración del contexto (usualmente para la cadena de conexión).</param>
+        /// <param name="options">Opciones de configuración del contexto.</param>
         public DeviceActivityDbContext(DbContextOptions<DeviceActivityDbContext> options)
             : base(options)
         {
+            // Configuración de SQLite para escenarios de alta carga (I/O intensivo)
+            var connection = Database.GetDbConnection();
+
+            // Es importante abrir la conexión para ejecutar los comandos PRAGMA
+            if (connection.State != System.Data.ConnectionState.Open)
+                connection.Open();
+
+            using var command = connection.CreateCommand();
+            // 1. Activa Write-Ahead Logging para permitir lecturas y escrituras simultáneas
+            command.CommandText = "PRAGMA journal_mode=WAL;";
+            command.ExecuteNonQuery();
+
+            // 2. Modo Normal: Equilibrio perfecto entre velocidad y seguridad en modo WAL
+            command.CommandText = "PRAGMA synchronous=NORMAL;";
+            command.ExecuteNonQuery();
+
+            // 3. Tiempo de espera de 5 segundos si la base de datos está ocupada antes de lanzar error
+            command.CommandText = "PRAGMA busy_timeout=5000;";
+            command.ExecuteNonQuery();
         }
 
         /// <inheritdoc/>
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
+            base.OnModelCreating(modelBuilder);
             // Carga la configuración para cada entidad
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
         }

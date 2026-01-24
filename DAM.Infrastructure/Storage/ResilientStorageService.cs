@@ -71,7 +71,7 @@ namespace DAM.Infrastructure.Storage
             else
             {
                 _logger.LogWarning(Messages.Storage.UsingLocalSqlite);
-                // TODO: Aquí se añadiría la lógica de reintento de envío (Saga/Outbox Pattern)
+                // TODO: Aquí se añadiría la lógica de reintento de envío (Saga/Outbox Pattern) (Evaluar factibilidad de incluir en futuras versiones)
                 return _localService;
             }
         }
