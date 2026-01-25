@@ -50,6 +50,11 @@ namespace DAM.Core.Interfaces
         /// </remarks>
         Task PersistInvoiceAsync(DeviceActivity activity, bool uptHorphanActvs);
 
+        /// <summary>
+        /// Escanea la base de datos en busca de actividades que quedaron en estado pendiente (ej: por apagado repentino) 
+        /// y procesa su facturación pendiente.
+        /// </summary>
+        /// <returns>Una tarea que representa el proceso de recuperación.</returns>
         Task RecoverPendingActivitiesAsync();
     }
 }

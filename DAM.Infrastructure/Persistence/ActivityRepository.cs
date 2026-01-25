@@ -103,11 +103,12 @@ namespace DAM.Infrastructure.Persistence
             }
         }
 
+        /// <inheritdoc/>
         public async Task<IEnumerable<DeviceActivity>> GetActivitiesMissingInvoicesAsync()
         {
             return await _context.DeviceActivities
                         .Where(a => a.Status == ActivityStatus.Pending)
-                        .Include(a => a.FilesCopied) // Cargamos solo lo necesario para la factura
+                        //.Include(a => a.FilesCopied) // Cargamos solo lo necesario para la factura
                         .AsNoTracking()
                         .ToListAsync();
         }

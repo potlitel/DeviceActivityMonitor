@@ -16,6 +16,11 @@ namespace DAM.Infrastructure.Migrations.Configurations
                    .HasColumnType("time(7)")
                    .IsRequired(false);
 
+            builder.Property(e => e.Status)
+                   .HasConversion<string>()
+                   .HasMaxLength(20)
+                   .IsRequired();
+
             builder.Ignore(e => e.CalculatedDuration);
 
             builder.HasKey(e => e.Id);

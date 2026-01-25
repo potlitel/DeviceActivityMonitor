@@ -45,6 +45,10 @@ namespace DAM.Core.Interfaces
         /// <returns>Tarea asíncrona completada.</returns>
         Task AddInvoiceAsync(Invoice invoice);
 
+        /// <summary>
+        /// Recupera todas las actividades que tienen archivos copiados pero carecen de una factura asociada.
+        /// </summary>
+        /// <returns>Una colección de actividades "huérfanas" o pendientes de procesamiento.</returns>
         Task<IEnumerable<DeviceActivity>> GetActivitiesMissingInvoicesAsync();
     }
 }
