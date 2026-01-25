@@ -94,7 +94,7 @@ namespace DAM.Infrastructure.Persistence
         }
 
         /// <inheritdoc/>
-        public async Task PersistInvoiceAsync(DeviceActivity activity)
+        public async Task PersistInvoiceAsync(DeviceActivity activity, bool uptHorphanActvs)
         {
             if (activity.FilesCopied.Count == 0) return;
 
@@ -110,6 +110,8 @@ namespace DAM.Infrastructure.Persistence
 
                     invoice.DeviceActivityId = activity.Id;
                     await storageService.StoreInvoiceAsync(invoice);
+                    if (uptHorphanActvs)
+                        await storageService.UpdateActivityAsync(activity); // new line
                     await storageService.SaveChangesAsync();
 
                     await storageService.CommitTransactionAsync();
@@ -121,6 +123,50 @@ namespace DAM.Infrastructure.Persistence
                 await storageService.RollbackTransactionAsync();
                 _logger.LogError(ex, Messages.Persistence.InvoiceFailed, activity.SerialNumber);
             }
+        }
+
+        //Para explicarle a la IA, se accede directamente al DbSet Activities de la interfaz uow usando el metodo GetActivitiesMissingInvoicesAsync(), ya que
+        //no me interesa usar ninguno de los servicios previos existentes, ni LocalDbStorageService, ni ApiStorageService para encontrar las actividades 'huerfanas'.
+        public async Task RecoverPendingActivitiesAsync()
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var uow = scope.ServiceProvider.GetRequiredService<IUnitOfWork>();
+
+            // 1. Buscar actividades que tengan archivos pero no factura
+            var pendingActivities = await uow.Activities.GetActivitiesMissingInvoicesAsync();
+
+            if (pendingActivities.Count()>0)
+            {
+                var options = new ParallelOptions { MaxDegreeOfParallelism = 5 };
+
+                await Parallel.ForEachAsync(pendingActivities, options, async (activity, token) =>
+                {
+                    try
+                    {
+                        _logger.LogWarning("Recuperando actividad huérfana: {Id}", activity.Id);
+                        await PersistInvoiceAsync(activity, true);
+                    }
+                    catch (Exception ex)
+                    {
+                        _logger.LogError(ex, "No se pudo recuperar la actividad huérfana: {Id}", activity.Id);
+                    }
+                });
+            }
+
+            #region ToDelete
+            //foreach (var activity in pendingActivities)
+            //{
+            //    try
+            //    {
+            //        _logger.LogWarning("Recuperando actividad huérfana: {Id}", activity.Id);
+            //        await PersistInvoiceAsync(activity, true);
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        _logger.LogError(ex, "No se pudo recuperar la actividad huérfana: {Id}", activity.Id);
+            //    }
+            //}
+            #endregion
         }
     }
 }

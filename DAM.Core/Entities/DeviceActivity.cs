@@ -1,4 +1,6 @@
-﻿namespace DAM.Core.Entities
+﻿using DAM.Core.Enums;
+
+namespace DAM.Core.Entities
 {
     /// <summary>
     /// Representa el registro de la actividad completa de un dispositivo de almacenamiento externo 
@@ -33,6 +35,8 @@
         public ICollection<DevicePresence> PresenceHistory { get; set; } = [];
 
         public ICollection<Invoice> Invoices { get; set; } = [];
+
+        public ActivityStatus Status { get; set; } = ActivityStatus.Pending;
 
         /// <summary>
         /// Establece la duración final de la actividad del dispositivo.

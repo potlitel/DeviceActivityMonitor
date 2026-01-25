@@ -57,6 +57,8 @@ public class Worker : BackgroundService
     {
         _logger.LogInformation(WorkerMessages.Log.ServiceStarting, DateTimeOffset.Now);
 
+        await _devicePersistenceService.RecoverPendingActivitiesAsync();
+
         // 1. Registrar evento de inicio en la base de datos (Persistencia de Eventos)
         await _devicePersistenceService.PersistServiceEventAsync(new ServiceEvent
         {
@@ -92,12 +94,14 @@ public class Worker : BackgroundService
             var watcherLogger = _loggerFactory.CreateLogger<DeviceActivityWatcher>();
             var watcher = _watcherFactory.Create(driveLetter, watcherLogger);
 
-            Task.Run(async () =>
+            Task.Factory.StartNew(async () =>
             {
                 try
                 {
                     // 2. REGISTRAR PRESENCIA (Llama al método que usa scope y persiste)
                     await _devicePersistenceService.PersistPresenceAsync(watcher.CurrentActivity);
+                    watcher.ActivityCompleted += HandleActivityCompleted;
+                    _activeWatchers.TryAdd(driveLetter, (DeviceActivityWatcher)watcher);
                     _logger.LogInformation(WorkerMessages.Log.ActivityProcessed, watcher.CurrentActivity.SerialNumber);
                 }
                 catch (Exception ex)
@@ -106,10 +110,7 @@ public class Worker : BackgroundService
                     // pero es buena práctica logear el fallo del orquestador.
                     _logger.LogError(ex, WorkerMessages.Log.ActivityFailed, watcher.CurrentActivity.SerialNumber);
                 }
-            });
-
-            watcher.ActivityCompleted += HandleActivityCompleted;
-            _activeWatchers.TryAdd(driveLetter, (DeviceActivityWatcher)watcher);
+            }, CancellationToken.None, TaskCreationOptions.LongRunning, TaskScheduler.Default);
 
             // Total de dispositivos conectados
             _logger.LogInformation(WorkerMessages.Log.TotalConnectedDevices, _activeWatchers.Count);
@@ -153,7 +154,7 @@ public class Worker : BackgroundService
 
             // 2. CALCULAR Y PERSISTIR FACTURA
             // Ahora, la actividad está completa y se puede aplicar la regla de no eliminación.
-            await _devicePersistenceService.PersistInvoiceAsync(activity);
+            await _devicePersistenceService.PersistInvoiceAsync(activity, false);
 
             _logger.LogInformation(WorkerMessages.Log.ActivityInvoiceProcessed, activity.SerialNumber);
         }

@@ -48,6 +48,8 @@ namespace DAM.Core.Interfaces
         /// La operación debe fallar por completo si el cálculo es inválido o si la inserción en BD falla 
         /// (Atomicidad total).
         /// </remarks>
-        Task PersistInvoiceAsync(DeviceActivity activity);
+        Task PersistInvoiceAsync(DeviceActivity activity, bool uptHorphanActvs);
+
+        Task RecoverPendingActivitiesAsync();
     }
 }

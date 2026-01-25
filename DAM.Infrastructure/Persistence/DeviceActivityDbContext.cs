@@ -64,6 +64,10 @@ namespace DAM.Infrastructure.Persistence
             base.OnModelCreating(modelBuilder);
             // Carga la configuración para cada entidad
             modelBuilder.ApplyConfigurationsFromAssembly(Assembly.GetExecutingAssembly());
+
+            modelBuilder.Entity<DeviceActivity>()
+                        .HasIndex(a => a.Status)
+                        .HasDatabaseName("IX_DeviceActivity_Status");
         }
     }
 }

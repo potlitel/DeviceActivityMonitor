@@ -1,6 +1,8 @@
 ﻿using DAM.Core.Constants;
 using DAM.Core.Entities;
+using DAM.Core.Enums;
 using DAM.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Persistence
@@ -42,10 +44,12 @@ namespace DAM.Infrastructure.Persistence
             }
         }
 
+        /// <inheritdoc/>
         public async Task UpdateActivityAsync(DeviceActivity activity)
         {
             try
             {
+                activity.Status = ActivityStatus.Completed;
                 _context.DeviceActivities.Update(activity);
                 await Task.CompletedTask;
             }
@@ -97,6 +101,15 @@ namespace DAM.Infrastructure.Persistence
                 _logger.LogError(ex, Messages.Repository.SaveEventError);
                 throw;
             }
+        }
+
+        public async Task<IEnumerable<DeviceActivity>> GetActivitiesMissingInvoicesAsync()
+        {
+            return await _context.DeviceActivities
+                        .Where(a => a.Status == ActivityStatus.Pending)
+                        .Include(a => a.FilesCopied) // Cargamos solo lo necesario para la factura
+                        .AsNoTracking()
+                        .ToListAsync();
         }
     }
 }

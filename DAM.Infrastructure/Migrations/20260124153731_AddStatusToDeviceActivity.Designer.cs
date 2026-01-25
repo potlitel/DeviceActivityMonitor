@@ -3,6 +3,7 @@ using System;
 using DAM.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace DAM.Infrastructure.Migrations
 {
     [DbContext(typeof(DeviceActivityDbContext))]
-    partial class DeviceActivityDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260124153731_AddStatusToDeviceActivity")]
+    partial class AddStatusToDeviceActivity
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.0");
@@ -73,9 +76,6 @@ namespace DAM.Infrastructure.Migrations
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Status")
-                        .HasDatabaseName("IX_DeviceActivity_Status");
 
                     b.ToTable("DeviceActivities");
                 });

@@ -20,6 +20,8 @@ namespace DAM.Core.Interfaces
         /// <summary>
         /// Marca una actividad existente como modificada en el contexto.
         /// </summary>
+        /// <param name="activity">El objeto DeviceActivity a actualizar.</param>
+        /// <returns>Tarea asíncrona que representa la operación de registro en el contexto.</returns>
         Task UpdateActivityAsync(DeviceActivity activity);
 
         /// <summary>
@@ -42,5 +44,7 @@ namespace DAM.Core.Interfaces
         /// <param name="invoice">El objeto Invoice a guardar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task AddInvoiceAsync(Invoice invoice);
+
+        Task<IEnumerable<DeviceActivity>> GetActivitiesMissingInvoicesAsync();
     }
 }
