@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Entities;
+using DAM.Infrastructure.Audit;
 using Microsoft.EntityFrameworkCore;
 using System.Reflection;
 
@@ -28,6 +29,16 @@ namespace DAM.Infrastructure.Persistence
         /// Conjunto de datos (tabla) para las facturas de los dispositivos.
         /// </summary>
         public DbSet<Invoice> Invoices { get; set; } = null!;
+
+        /// <summary>
+        /// Conjunto de datos (tabla) para las trazas del sistema.
+        /// </summary>
+        public DbSet<AuditLog> AuditLogs { get; set; } = null!;
+
+        /// <summary>
+        /// Conjunto de datos (tabla) para las facturas de los dispositivos.
+        /// </summary>
+        public DbSet<ApplicationUser> Users { get; set; } = null!;
 
         /// <summary>
         /// Inicializa una nueva instancia de <see cref="DeviceActivityDbContext"/>.

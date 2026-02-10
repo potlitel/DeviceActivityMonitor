@@ -8,7 +8,7 @@ namespace DAM.Core.Interfaces
     /// <remarks>
     /// Este repositorio actúa como una abstracción de la capa de datos.
     /// </remarks>
-    public interface IActivityRepository
+    public interface IActivityRepository : IBaseRepository<DeviceActivity>
     {
         /// <summary>
         /// Registra una nueva actividad de dispositivo en el contexto de persistencia.
