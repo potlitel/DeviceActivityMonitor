@@ -319,7 +319,7 @@ public static class ServiceCollectionExtensions
         services.SwaggerDocument(o =>
         {
             // 🎯 ESTO ES CRÍTICO - EVITA DUPLICADOS
-            o.EnableJWTBearerAuth = false;
+            o.EnableJWTBearerAuth = true;
             o.DocumentSettings = s =>
             {
                 s.Title = "DAM API - Device Activity Monitor";
@@ -357,8 +357,8 @@ public static class ServiceCollectionExtensions
                     > **v1.0.0** - Implementación inicial con soporte completo para monitoreo de dispositivos
                     """;
 
-                // 📋 DESHABILITAR TAGS AUTOMÁTICOS - ¡ASÍ SÍ FUNCIONA!
-                s.OperationProcessors.Add(new TagsOperationProcessor()); // 👈 PROCESADOR PERSONALIZADO
+                // 📋 DESHABILITAR TAGS AUTOMÁTICOS
+                s.OperationProcessors.Add(new TagsOperationProcessor());
 
                 // 🎯 CONTACTO - QUITAR COMENTARIO
                 //s.Contact = new NSwag.OpenApiContact
@@ -367,30 +367,6 @@ public static class ServiceCollectionExtensions
                 //    Email = "arquitectura@dam.com",
                 //    Url = "https://dam.internal/architecture"
                 //};
-
-                //var scheme = new NSwag.OpenApiSecurityScheme
-                //{
-                //    Type = OpenApiSecuritySchemeType.ApiKey,
-                //    Name = "Authorization",
-                //    In = OpenApiSecurityApiKeyLocation.Header,
-                //    Scheme = "bearer",
-                //    BearerFormat = "JWT",
-                //    Description = """
-                //                🔐 **Autenticación JWT**
-
-                //                **Instrucciones:**
-                //                1. Obtén tu token en `/auth/login`
-                //                2. Copia el token SIN comillas
-                //                3. Haz clic en 'Authorize' y pega: `Bearer tu_token_aquí`
-
-                //                **Ejemplo:**
-                //                ```
-                //                Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-                //                ```
-                //                """
-                //};
-
-                //s.AddSecurity("Bearer", scheme);
 
                 s.AddSecurity("Bearer", new NSwag.OpenApiSecurityScheme
                 {
@@ -403,9 +379,12 @@ public static class ServiceCollectionExtensions
                     🔐 **Autenticación JWT**
                     
                     **Instrucciones:**
-                    1️⃣ Haz login en `/auth/login`
-                    2️⃣ Copia el token de la respuesta
-                    3️⃣ Pega aquí: `Bearer eyJhbGciOiJIUzI1NiIs...`
+
+                    1️⃣ Haz login en `/auth/login`.
+                    
+                    2️⃣ Copia el token de la respuesta.
+                    
+                    3️⃣ Pega aquí: `Bearer eyJhbGciOiJIUzI1NiIs...`.
                     
                     ⚠️ **IMPORTANTE:** Incluye la palabra "Bearer" antes del token.
                     
@@ -415,6 +394,8 @@ public static class ServiceCollectionExtensions
                     ```
                     """
                 });
+
+                s.OperationProcessors.Add(new NSwag.Generation.Processors.Security.AspNetCoreOperationSecurityScopeProcessor("Bearer"));
 
             };
         });
