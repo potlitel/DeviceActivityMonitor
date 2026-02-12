@@ -1,14 +1,12 @@
-﻿//using DAM.Core.Abstractions;
-//using DAM.Core.Common;
-//using DAM.Core.DTOs.Audit;
-//using DAM.Core.Features.Audit.Queries;
-//using DAM.Infrastructure.Features.Audit;
+﻿using DAM.Core.Abstractions;
+using DAM.Core.Common;
+using DAM.Core.DTOs.Audit;
+using DAM.Core.Features.Audit.Queries;
 
-//namespace DAM.Infrastructure.Caching.Decorators;
+namespace DAM.Infrastructure.Caching.Decorators;
 
-//public class CachedGetAuditLogsHandler(
-//    GetAuditLogsHandler innerHandler,
-//    ICacheService cache) : IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogResponse>>
+//public class CachedGetAuditLogsHandler(GetAuditLogsQuery innerHandler,ICacheService cache) : 
+//    IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogResponse>>
 //{
 //    public async Task<PaginatedList<AuditLogResponse>> HandleAsync(GetAuditLogsQuery query, CancellationToken ct)
 //    {

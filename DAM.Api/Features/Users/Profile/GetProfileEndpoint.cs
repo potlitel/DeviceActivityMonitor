@@ -9,15 +9,45 @@ using System.Security.Claims;
 
 namespace DAM.Api.Features.Users.Profile;
 
+/// <summary>
+/// 👤 Obtiene el perfil completo del usuario autenticado.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>🔍 Detalles del endpoint:</b>
+/// <list type="bullet">
+/// <item><description><b>Método:</b> GET</description></item>
+/// <item><description><b>Ruta:</b> /identity/profile</description></item>
+/// <item><description><b>Autenticación:</b> Requerida (JWT Bearer)</description></item>
+/// <item><description><b>Claims requeridos:</b> UserId</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>📋 Información retornada:</b>
+/// <list type="bullet">
+/// <item><description>📧 Email y nombre de usuario</description></item>
+/// <item><description>🔑 Rol y permisos asignados</description></item>
+/// <item><description>🔐 Estado de 2FA</description></item>
+/// <item><description>⚙️ Preferencias de usuario (tema, idioma)</description></item>
+/// <item><description>📜 Claims adicionales del token</description></item>
+/// </list>
+/// </para>
+/// </remarks>
 public class GetProfileEndpoint(IDispatcher dispatcher)
     : BaseEndpoint<EmptyRequest, ProfileResponse>
 {
     public override void Configure()
     {
-        Get("/identity/profile"); // GET /api/profile
+        Get("/identity/profile");
         Claims("UserId");
-        Description(x => x.WithTags("Users"));
-        Summary(s => s.Summary = "Obtiene el perfil del usuario actual.");
+
+        Description(x => x
+            .Produces<ProfileResponse>(200)
+            .ProducesProblem(401)
+            .ProducesProblem(404)
+            .WithTags("👤 Perfil"));
+
+        Summary(s => s.Summary = "👤 [Perfil] Obtiene perfil del usuario actual");
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken ct)
@@ -37,8 +67,7 @@ public class GetProfileEndpoint(IDispatcher dispatcher)
 
         if (string.IsNullOrEmpty(userId))
         {
-            // Agregamos un error manual a la colección de fallos
-            AddError("El identificador de usuario no está presente en el token.");
+            AddError("🔒 El identificador de usuario no está presente en el token.");
             await SendErrorsAsync(401, ct);
             return;
         }
@@ -47,11 +76,11 @@ public class GetProfileEndpoint(IDispatcher dispatcher)
 
         if (profile == null)
         {
-            AddError("El perfil de usuario no pudo ser localizado.");
+            AddError("👤 El perfil de usuario no pudo ser localizado.");
             await SendErrorsAsync(404, ct);
             return;
         }
 
-        await SendSuccessAsync(profile, "Perfil recuperado correctamente", ct);
+        await SendSuccessAsync(profile, "✅ Perfil recuperado correctamente", ct);
     }
 }

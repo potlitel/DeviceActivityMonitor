@@ -7,10 +7,55 @@ using FastEndpoints;
 
 namespace DAM.Api.Features.Audit;
 
-// 1. Definimos la Query (CQRS)
 public record GetAuditLogsQuery(AuditLogFilter Filter) : IQuery<PaginatedList<AuditLogResponse>>;
 
-// 2. El Endpoint
+/// <summary>
+/// 📋 Obtiene el historial completo de auditoría del sistema con capacidades avanzadas de filtrado.
+/// </summary>
+/// <remarks>
+/// <para>
+/// <b>🔍 Detalles del endpoint:</b>
+/// <list type="bullet">
+/// <item><description><b>Método:</b> GET</description></item>
+/// <item><description><b>Ruta:</b> /audit/logs</description></item>
+/// <item><description><b>Autenticación:</b> Requerida (JWT Bearer)</description></item>
+/// <item><description><b>Roles permitidos:</b> Manager</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>🎯 Propósito:</b>
+/// Proporciona una vista completa y filtrable de todas las operaciones realizadas en el sistema.
+/// Es la herramienta principal para:
+/// <list type="bullet">
+/// <item><description>👁️‍🗨️ Supervisión de actividades de usuarios</description></item>
+/// <item><description>🔍 Investigación de incidentes de seguridad</description></item>
+/// <item><description>📊 Generación de reportes de cumplimiento</description></item>
+/// <item><description>🧪 Auditoría forense y trazabilidad</description></item>
+/// </list>
+/// </para>
+/// <para>
+/// <b>📌 Filtros disponibles:</b>
+/// | Parámetro | Tipo | Descripción |
+/// |-----------|------|-------------|
+/// | Username | string | Filtra por nombre de usuario (contiene) |
+/// | FromDate | datetime | Registros posteriores a esta fecha |
+/// | ToDate | datetime | Registros anteriores a esta fecha |
+/// | Action | string | Tipo de acción (Login, Create, Update, Delete) |
+/// | Resource | string | Recurso afectado |
+/// | PageNumber | int | Número de página (≥1) |
+/// | PageSize | int | Registros por página (1-100) |
+/// </list>
+/// </para>
+/// <para>
+/// <b>⚠️ Consideraciones de rendimiento:</b>
+/// Para rangos de fechas muy amplios, se recomienda utilizar paginación y
+/// limitar el tamaño de página a 50 registros o menos.
+/// </para>
+/// </remarks>
+/// <response code="200">✅ Lista paginada de registros de auditoría</response>
+/// <response code="400">❌ Parámetros de filtrado inválidos</response>
+/// <response code="401">❌ No autenticado o token inválido</response>
+/// <response code="403">❌ No autorizado - Se requiere rol 'Manager'</response>
 public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, ApiResponse<PaginatedList<AuditLogResponse>>>
 {
     private readonly IDispatcher _dispatcher;
@@ -20,10 +65,39 @@ public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, ApiResponse<Pag
     public override void Configure()
     {
         Get("/audit/logs");
-        Roles("Manager"); // Seguridad: Solo Managers
-        Summary(s => {
-            s.Summary = "Obtiene el historial de auditoría del sistema.";
-            s.Description = "Permite filtrar por usuario, fecha y acción realizada.";
+        Roles("Manager");
+
+        Description(x => x
+            .Produces<ApiResponse<PaginatedList<AuditLogResponse>>>(200)
+            .ProducesProblem(400)
+            .ProducesProblem(401)
+            .ProducesProblem(403)
+            .WithTags("📋 Auditoría")
+            .WithDescription("""
+                Este endpoint implementa paginación tipo offset (PageNumber/PageSize).
+                
+                🔍 **Ejemplo de consulta:**
+                ```
+                GET /audit/logs?Username=admin&FromDate=2026-01-01&PageNumber=1&PageSize=20
+                ```
+                """));
+
+        Summary(s =>
+        {
+            s.Summary = "📋 [Auditoría] Obtiene historial completo con filtros";
+            s.Description = """
+                Recupera el historial de auditoría del sistema con múltiples criterios de filtrado.
+                
+                **💡 Pro-tip:** Use fechas en formato ISO 8601 (yyyy-MM-dd) para mejor compatibilidad.
+                """;
+            s.ExampleRequest = new AuditLogFilter
+            {
+                Username = "admin",
+                FromDate = DateTime.UtcNow.AddDays(-7),
+                ToDate = DateTime.UtcNow,
+                PageNumber = 1,
+                PageSize = 20
+            };
         });
     }
 
@@ -32,6 +106,7 @@ public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, ApiResponse<Pag
         var query = new GetAuditLogsQuery(req);
         var result = await _dispatcher.QueryAsync(query, ct);
 
-        await SendSuccessAsync(ApiResponse<PaginatedList<AuditLogResponse>>.Ok(result), ct: ct);
+        await SendSuccessAsync(ApiResponse<PaginatedList<AuditLogResponse>>.Ok(result),
+            "✅ Historial de auditoría recuperado correctamente", ct);
     }
 }

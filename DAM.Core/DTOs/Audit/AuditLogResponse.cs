@@ -4,7 +4,7 @@
 /// DTO para la visualización de trazas de auditoría.
 /// </summary>
 public record AuditLogResponse(
-    int Id,
+    Guid Id,
     string Username,
     string Action,    // Ejemplo: "LOGIN_SUCCESS", "INVOICE_CALCULATED"
     string Resource,  // Ejemplo: "/api/invoices"

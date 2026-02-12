@@ -1,120 +1,34 @@
-using DAM.Api.Features.Audit;
-using DAM.Api.Infrastructure.Health;
-using DAM.Core.Abstractions;
-using DAM.Core.Common;
-using DAM.Core.DTOs.Audit;
-using DAM.Core.DTOs.Invoices;
-using DAM.Core.Features.Invoices.Commands;
-using DAM.Core.Interfaces;
-//using DAM.Infrastructure.Caching.Decorators;
-using DAM.Infrastructure.CQRS;
-//using DAM.Infrastructure.Features.Audit;
-using DAM.Infrastructure.Identity;
-using DAM.Infrastructure.Persistence;
-using DAM.Infrastructure.Repositories;
-using FastEndpoints;
-using FastEndpoints.Security;
-using FastEndpoints.Swagger;
-using Microsoft.AspNetCore.Diagnostics.HealthChecks;
-using NSwag;
+Ôªøusing DAM.Api.Extensions;
 
 var builder = WebApplication.CreateBuilder(args);
-var jwtSecret = builder.Configuration["Jwt:Secret"] ?? "Clave_Super_Secreta_Bancaria_2026_DAM";
 
-// 3. Core & Business Services
-builder.Services.AddSingleton<ICacheService, MemoryCacheService>();
-builder.Services.AddScoped<IIdentityService, IdentityService>();
-//builder.Services.AddScoped<IInvoiceCalculator, InvoiceCalculator>();
-builder.Services.AddScoped<IUnitOfWork, UnitOfWork>();
+// üéØ REGISTRO MODULAR DE SERVICIOS
+builder.Services
+    .AddInfrastructure(builder.Configuration)
+    .AddSecurity(builder.Configuration, builder.Environment) // üîê JWT + IdentityService
+    .AddRepositories()                                       // üì¶ Repositorios
+    .AddDomainServices()                                     // ‚öôÔ∏è Servicios de dominio
+    .AddCQRS()                                               // üì® Handlers autom√°ticos
+    .AddValidation()                                         // ‚úÖ FluentValidation
+    .AddBCrypt(builder.Configuration)                        // üîß BCrypt settings
+    .AddFastEndpointsWithSwagger()                           // üöÄ FastEndpoints + Swagger
+    .AddHealthChecksWithChecks();                            // ü©∫ Health checks
 
-// 4. CQRS Dispatcher
-builder.Services.AddScoped<IDispatcher, InternalDispatcher>();
-
-// 5. Registro autom·tico de Handlers (Usando reflexiÛn o manual)
-//builder.Services.AddScoped<IQueryHandler<GetActivitiesQuery, PaginatedList<ActivityDto>>, GetActivitiesHandler>();
-//builder.Services.AddScoped<ICommandHandler<CalculateInvoiceCommand, InvoiceResponse>, CalculateInvoiceHandler>();
-
-// 1. ConfiguraciÛn de Seguridad
-builder.Services.AddAuthenticationJwtBearer(s => s.SigningKey = jwtSecret); // VersiÛn correcta
-builder.Services.AddAuthorization();
-
-//builder.Services.AddHealthChecks()
-//    .AddCheck<StorageHealthCheck>("Almacenamiento")
-//    .AddDbContextCheck<DeviceActivityDbContext>("Base de Datos")
-//    .AddProcessAllocatedMemoryCheck(maximumMegabytesAllocated: 512, name: "Memoria RAM");
-
-builder.Services.AddScoped<IActivityRepository, ActivityRepository>();
-builder.Services.AddScoped<IPresenceRepository, PresenceRepository>();
-builder.Services.AddScoped<IInvoiceRepository, InvoiceRepository>();
-builder.Services.AddScoped<IServiceEventRepository, ServiceEventRepository>();
-//builder.Services.AddScoped<IAuditRepository, AuditRepository>();
-
-// Registro del Handler Original
-//builder.Services.AddScoped<GetAuditLogsHandler>();
-
-// Registro del Decorador (La API pedir· IQueryHandler y recibir· el Cached)
-//builder.Services.AddScoped<IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogResponse>>>(sp =>
-//{
-//    var original = sp.GetRequiredService<GetAuditLogsHandler>();
-//    var cache = sp.GetRequiredService<ICacheService>();
-//    return new CachedGetAuditLogsHandler(original, cache);
-//});
-
-// 2. Swagger con soporte para JWT (ConfiguraciÛn para NSwag)
-builder.Services.SwaggerDocument(o =>
-{
-    o.DocumentSettings = s =>
-    {
-        s.Title = "DAM API - Device Activity Monitor";
-        s.Version = "v1";
-
-        var scheme = new NSwag.OpenApiSecurityScheme
-        {
-            Description = "Introduzca el token JWT: Bearer {tu_token}",
-            Name = "Authorization",
-            In = OpenApiSecurityApiKeyLocation.Header, // Sintaxis especÌfica de NSwag
-            Type = OpenApiSecuritySchemeType.ApiKey     // Sintaxis especÌfica de NSwag
-        };
-
-        s.AddSecurity("Bearer", scheme);
-    };
-});
-
-builder.Services.AddFastEndpoints();
+//builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
-// 3. Middlewares
+// üéØ PIPELINE DE LA APLICACI√ìN
 app.UseAuthentication();
 app.UseAuthorization();
-app.UseFastEndpoints(c =>
-{
-    c.Endpoints.RoutePrefix = "api";
-    // Si usas el AuditPreProcessor, se registra aquÌ:
-    // c.Endpoints.Configurator = ep => ep.PreProcessors(Order.Before, new AuditPreProcessor());
-});
 
-app.UseSwaggerGen();
+app.UseFastEndpointsPipeline();
+app.UseSwaggerWithUI();
 
-// Endpoint p˙blico para balanceadores (ligero)
-app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+// ü©∫ Health Checks
+app.MapHealthChecksWithUI();
 
-// Endpoint detallado para administradores (protegido)
-app.MapHealthChecks("/health/ready", HealthCheckExtensions.GetJsonOptions());
-
-using (var scope = app.Services.CreateScope())
-{
-    var services = scope.ServiceProvider;
-    try
-    {
-        var context = services.GetRequiredService<DeviceActivityDbContext>();
-        //DbInitializer.Seed(context);
-    }
-    catch (Exception ex)
-    {
-        var logger = services.GetRequiredService<ILogger<Program>>();
-        logger.LogError(ex, "OcurriÛ un error al poblar la base de datos.");
-    }
-}
+// üå± Inicializaci√≥n de BD
+await app.EnsureDatabaseCreatedAsync();
 
 app.Run();

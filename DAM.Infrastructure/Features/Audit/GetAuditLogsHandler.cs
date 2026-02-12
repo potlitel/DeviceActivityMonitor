@@ -1,13 +1,13 @@
-﻿//using DAM.Core.Abstractions;
-//using DAM.Core.Common;
-//using DAM.Core.DTOs.Audit;
-//using DAM.Infrastructure.Persistence;
-//using Microsoft.EntityFrameworkCore;
+﻿using DAM.Core.Abstractions;
+using DAM.Core.Common;
+using DAM.Core.DTOs.Audit;
+using DAM.Core.Features.Audit.Queries;
+using DAM.Infrastructure.Persistence;
+using Microsoft.EntityFrameworkCore;
 
-//namespace DAM.Infrastructure.Features.Audit;
+namespace DAM.Infrastructure.Features.Audit;
 
-//public class GetAuditLogsHandler(DeviceActivityDbContext db)
-//    : IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogResponse>>
+//public class GetAuditLogsHandler(DeviceActivityDbContext db) : IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogResponse>>
 //{
 //    public async Task<PaginatedList<AuditLogResponse>> HandleAsync(GetAuditLogsQuery query, CancellationToken ct)
 //    {

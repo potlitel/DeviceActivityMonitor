@@ -1,5 +1,4 @@
 ﻿using DAM.Core.Entities;
-using DAM.Infrastructure.Audit;
 using DAM.Infrastructure.Persistence;
 using FastEndpoints;
 using System.Security.Claims;
