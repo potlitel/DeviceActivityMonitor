@@ -1,18 +1,18 @@
-﻿//using DAM.Core.Abstractions;
-//using DAM.Core.Common;
-//using DAM.Core.DTOs.AuditLogs;
-//using DAM.Core.Features.Audit.Queries;
-//using System;
-//using System.Collections.Generic;
-//using System.Text;
+﻿using DAM.Core.Abstractions;
+using DAM.Core.Common;
+using DAM.Core.DTOs.AuditLogs;
+using DAM.Core.Features.Audit.Queries;
+using DAM.Core.Interfaces;
+using DAM.Infrastructure.Extensions;
 
-//namespace DAM.Infrastructure.Features.AuditLogs
-//{
-//    //public class GetAuditLogsHandler(IAuditRepository repository) : IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogDto>>
-//    //{
-//    //    public async Task<PaginatedList<AuditLogDto>> HandleAsync(GetAuditLogsQuery q, CancellationToken ct)
-//    //        => await repository.GetAllQueryable()
-//    //            .OrderByDescending(x => x.TimestampUtc)
-//    //            .ToPaginatedListAsync(q.Page, q.Size, x => new AuditLogDto(x.Username, x.Action, x.TimestampUtc), ct);
-//    //}
-//}
+namespace DAM.Infrastructure.Features.AuditLogs
+{
+    public class GetAuditLogsHandler(IAuditRepository repository) : IQueryHandler<GetAuditLogsQuery, PaginatedList<AuditLogDto>>
+    {
+        public async Task<PaginatedList<AuditLogDto>> HandleAsync(GetAuditLogsQuery q, CancellationToken ct)
+            => await repository.GetAllQueryable()
+                .OrderByDescending(x => x.TimestampUtc)
+                .ToPaginatedListAsync(q.Filter.PageNumber, q.Filter.PageSize, 
+                                      x => new AuditLogDto(x.Id, x.UserId, x.Action, x.Resource, x.HttpMethod, x.TimestampUtc), ct);
+    }
+}

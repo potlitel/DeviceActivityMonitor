@@ -25,7 +25,7 @@ namespace DAM.Api.Features.DevicePresence
     /// presencia pueden estar asociados a una misma actividad.
     /// </para>
     /// </remarks>
-    public class GetPresenceByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdRequest, DevicePresenceDto>
+    public class GetPresenceByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdIntRequest, DevicePresenceDto>
     {
         public override void Configure() {
 
@@ -40,7 +40,7 @@ namespace DAM.Api.Features.DevicePresence
                 .WithTags("👤 Presencia"));
 
         }
-        public override async Task HandleAsync(GetByIdRequest r, CancellationToken ct)
+        public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)
         {
             var res = await d.QueryAsync(new GetPresenceByIdQuery(r.Id), ct);
 

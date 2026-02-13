@@ -8,4 +8,4 @@ namespace DAM.Core.Features.Invoices.Queries;
 public record GetInvoicesQuery(InvoiceFilter Filter) : IQuery<PaginatedList<InvoiceDto>>;
 
 /// <summary> Detalle contable de una factura específica. </summary>
-public record GetInvoiceByIdQuery(Guid Id) : IQuery<InvoiceDto?>;
+public record GetInvoiceByIdQuery(int Id) : IQuery<InvoiceDto?>;

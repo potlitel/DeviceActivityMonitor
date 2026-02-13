@@ -1,4 +1,5 @@
 ﻿using DAM.Api.Base;
+using DAM.Api.Features.Users.Profile;
 using DAM.Infrastructure.Identity;
 using FastEndpoints;
 using FastEndpoints.Security;
@@ -16,6 +17,11 @@ public class Enable2FAEndpoint : BaseEndpoint<Enable2FARequest, object>
     {
         Post("/identity/profile/2fa/enable");
         Claims("UserId"); // Solo usuarios autenticados
+
+        Description(x => x
+            .Produces<object>(200)
+            .ProducesProblem(401)
+            .WithTags("🔐 2FA"));
     }
 
     public override async Task HandleAsync(Enable2FARequest req, CancellationToken ct)

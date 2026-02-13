@@ -44,6 +44,7 @@ public class GetProfileEndpoint(IDispatcher dispatcher)
         Description(x => x
             .Produces<ProfileResponse>(200)
             .ProducesProblem(401)
+            .ProducesProblem(403)
             .ProducesProblem(404)
             .WithTags("👤 Perfil"));
 

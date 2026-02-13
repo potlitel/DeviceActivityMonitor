@@ -2,6 +2,7 @@
 using DAM.Core.Abstractions;
 using DAM.Core.Common;
 using DAM.Core.DTOs.Audit;
+using DAM.Core.Features.Presence.Queries;
 using DAM.Infrastructure.CQRS;
 using FastEndpoints;
 
@@ -56,7 +57,7 @@ public record GetAuditLogsQuery(AuditLogFilter Filter) : IQuery<PaginatedList<Au
 /// <response code="400">❌ Parámetros de filtrado inválidos</response>
 /// <response code="401">❌ No autenticado o token inválido</response>
 /// <response code="403">❌ No autorizado - Se requiere rol 'Manager'</response>
-public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, ApiResponse<PaginatedList<AuditLogResponse>>>
+public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, PaginatedList<AuditLogResponse>>
 {
     private readonly IDispatcher _dispatcher;
 
@@ -101,12 +102,6 @@ public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, ApiResponse<Pag
         });
     }
 
-    public override async Task HandleAsync(AuditLogFilter req, CancellationToken ct)
-    {
-        var query = new GetAuditLogsQuery(req);
-        var result = await _dispatcher.QueryAsync(query, ct);
-
-        await SendSuccessAsync(ApiResponse<PaginatedList<AuditLogResponse>>.Ok(result),
-            "✅ Historial de auditoría recuperado correctamente", ct);
-    }
+    public override async Task HandleAsync(AuditLogFilter req, CancellationToken ct) =>
+        await SendSuccessAsync(await _dispatcher.QueryAsync(new GetAuditLogsQuery(req), ct), ct: ct);
 }

@@ -29,7 +29,7 @@ namespace DAM.Api.Features.DeviceActivity
     /// <response code="401">❌ No autenticado o token inválido</response>
     /// <response code="403">❌ No autorizado - Se requiere rol 'Manager'</response>
     /// <response code="404">❌ No se encontró actividad con el ID especificado</response>
-    public class GetActivityByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdRequest, DeviceActivityDto>
+    public class GetActivityByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdIntRequest, DeviceActivityDto>
     {
         public override void Configure() {
 
@@ -47,11 +47,11 @@ namespace DAM.Api.Features.DeviceActivity
             {
                 s.Summary = "📱 [Actividades] Obtiene una actividad por ID";
                 s.Description = "Recupera los detalles completos de una actividad específica utilizando su identificador.";
-                s.ExampleRequest = new GetByIdRequest(Guid.NewGuid());
+                s.ExampleRequest = new GetByIdIntRequest(15);
             });
 
         }
-        public override async Task HandleAsync(GetByIdRequest r, CancellationToken ct)
+        public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)
         {
             var res = await d.QueryAsync(new GetActivityByIdQuery(r.Id), ct);
 

@@ -8,4 +8,4 @@ namespace DAM.Core.Features.Activities.Queries;
 public record GetActivitiesQuery(ActivityFilter Filter) : IQuery<PaginatedList<DeviceActivityDto>>;
 
 /// <summary> Consulta para obtener el detalle de una actividad por su ID. </summary>
-public record GetActivityByIdQuery(Guid Id) : IQuery<DeviceActivityDto?>;
+public record GetActivityByIdQuery(int Id) : IQuery<DeviceActivityDto?>;

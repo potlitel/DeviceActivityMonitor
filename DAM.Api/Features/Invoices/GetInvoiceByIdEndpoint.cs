@@ -9,7 +9,7 @@ namespace DAM.Api.Features.Invoices
     /// 💰 Obtiene una factura específica por su identificador.
     /// </summary>
 
-    public class GetInvoiceByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdRequest, InvoiceDto>
+    public class GetInvoiceByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdIntRequest, InvoiceDto>
     {
         public override void Configure() {
 
@@ -24,7 +24,7 @@ namespace DAM.Api.Features.Invoices
                 .WithTags("💰 Facturación"));
 
         }
-        public override async Task HandleAsync(GetByIdRequest r, CancellationToken ct)
+        public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)
         {
             var res = await d.QueryAsync(new GetInvoiceByIdQuery(r.Id), ct);
 

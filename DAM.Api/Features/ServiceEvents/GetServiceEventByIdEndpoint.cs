@@ -19,8 +19,8 @@ namespace DAM.Api.Features.ServiceEvents
                 .Produces<ServiceEventDto>(200)
                 .ProducesProblem(401)
                 .ProducesProblem(403)
-                .ProducesProblem(404));
-                //.WithTags("📊 Sistema/Eventos"));
+                .ProducesProblem(404)
+                .WithTags("📊 Sistema/Eventos"));
 
         }
         public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)

@@ -8,4 +8,4 @@ namespace DAM.Core.Features.Presence.Queries;
 public record GetPresencesQuery(PresenceFilter Filter) : IQuery<PaginatedList<DevicePresenceDto>>;
 
 /// <summary> Detalle de un evento de presencia específico. </summary>
-public record GetPresenceByIdQuery(Guid Id) : IQuery<DevicePresenceDto?>;
+public record GetPresenceByIdQuery(Int32 Id) : IQuery<DevicePresenceDto?>;

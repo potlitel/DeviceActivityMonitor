@@ -15,6 +15,6 @@ namespace DAM.Infrastructure.Features.Invoices.Handlers
         public async Task<PaginatedList<InvoiceDto>> HandleAsync(GetInvoicesQuery q, CancellationToken ct)
             => await repository.GetAllQueryable()
                 .OrderByDescending(x => x.Timestamp)
-                .ToPaginatedListAsync(q.Filter.PageNumber, q.Filter.PageNumber, x => new InvoiceDto(x.Id, x.SerialNumber, x.Timestamp, x.TotalAmount, x.Description), ct);
+                .ToPaginatedListAsync(q.Filter.PageNumber, q.Filter.PageSize, x => new InvoiceDto(x.Id, x.SerialNumber, x.Timestamp, x.TotalAmount, x.Description), ct);
     }
 }
