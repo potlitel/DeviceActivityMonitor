@@ -59,7 +59,7 @@ public static class ServiceCollectionExtensions
 
         if (!jwtSettings.IsValid())
         {
-            throw new InvalidOperationException($"""
+            throw new ConfigurationException($"""
             ❌ Configuración JWT inválida. Verifica appsettings.json:
             - Secret: {(string.IsNullOrEmpty(jwtSettings.Secret) ? "❌ NO CONFIGURADO" : "✅ CONFIGURADO")}
             - Secret Length: {jwtSettings.Secret?.Length ?? 0} caracteres (mínimo 32)
@@ -179,6 +179,7 @@ public static class ServiceCollectionExtensions
     {
         services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddScoped<IInvoiceCalculator, FixedPriceInvoiceCalculator>();
+        services.AddScoped<IAuditService, AuditService>();
 
         return services;
     }
@@ -451,6 +452,32 @@ public static class ServiceCollectionExtensions
             .AddCheck<StorageHealthCheck>("💾 Almacenamiento")
             .AddDbContextCheck<DeviceActivityDbContext>("🗄️ Base de Datos");
             //.AddProcessAllocatedMemoryCheck(maximumMegabytesAllocated: 512, name: "🧠 Memoria RAM");
+
+        return services;
+    }
+
+    /// <summary>
+    /// Configura las políticas de Intercambio de Recursos de Origen Cruzado (CORS).
+    /// </summary>
+    /// <param name="services">Colección de servicios de IServiceCollection.</param>
+    /// <param name="configuration">Configuración de la aplicación para extraer orígenes permitidos.</param>
+    /// <returns>La colección de servicios configurada.</returns>
+    /// <remarks>
+    /// 🛡️ <b>Seguridad:</b> En entornos de producción, evite el uso de 'AllowAnyOrigin'.
+    /// Esta implementación permite la comunicación fluida con el Frontend asegurando que los headers 
+    /// de autorización (JWT) no sean bloqueados por el navegador.
+    /// </remarks>
+    public static IServiceCollection AddCustomCors(this IServiceCollection services, IConfiguration configuration)
+    {
+        services.AddCors(options =>
+        {
+            options.AddPolicy("DAMPolicy", policy =>
+            {
+                policy.AllowAnyOrigin()
+                      .AllowAnyMethod()
+                      .AllowAnyHeader();
+            });
+        });
 
         return services;
     }

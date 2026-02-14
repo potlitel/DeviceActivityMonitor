@@ -12,13 +12,15 @@ builder.Services
     .AddValidation()                                         // ✅ FluentValidation
     .AddBCrypt(builder.Configuration)                        // 🔧 BCrypt settings
     .AddFastEndpointsWithSwagger()                           // 🚀 FastEndpoints + Swagger
-    .AddHealthChecksWithChecks();                            // 🩺 Health checks
+    .AddHealthChecksWithChecks()                             // 🩺 Health checks
+    .AddCustomCors(builder.Configuration);
 
 //builder.Services.AddHttpContextAccessor();
 
 var app = builder.Build();
 
 // 🎯 PIPELINE DE LA APLICACIÓN
+app.UseCors("DefaultPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 
