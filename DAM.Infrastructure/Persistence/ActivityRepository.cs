@@ -2,6 +2,7 @@
 using DAM.Core.Entities;
 using DAM.Core.Enums;
 using DAM.Core.Interfaces;
+using DAM.Infrastructure.Repositories;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
 
@@ -13,28 +14,17 @@ namespace DAM.Infrastructure.Persistence
     /// <remarks>
     /// Se encarga de las operaciones CRUD básicas y maneja las excepciones de persistencia.
     /// </remarks>
-    public class ActivityRepository : IActivityRepository
+    public class ActivityRepository(DeviceActivityDbContext db, ILogger<ActivityRepository> logger)
+    : BaseRepository<DeviceActivity>(db), IActivityRepository
     {
-        private readonly DeviceActivityDbContext _context;
-        private readonly ILogger<ActivityRepository> _logger;
-
-        /// <summary>
-        /// Inicializa una nueva instancia de <see cref="ActivityRepository"/>.
-        /// </summary>
-        /// <param name="context">El contexto de la base de datos de EF Core.</param>
-        /// <param name="logger">El servicio de logging.</param>
-        public ActivityRepository(DeviceActivityDbContext context, ILogger<ActivityRepository> logger)
-        {
-            _context = context;
-            _logger = logger;
-        }
+        private readonly ILogger<ActivityRepository> _logger = logger;
 
         /// <inheritdoc/>
         public async Task AddActivityAsync(DeviceActivity activity)
         {
             try
             {
-                await _context.DeviceActivities.AddAsync(activity);
+                await _db.DeviceActivities.AddAsync(activity);
             }
             catch (Exception ex)
             {
@@ -50,7 +40,7 @@ namespace DAM.Infrastructure.Persistence
             try
             {
                 activity.Status = ActivityStatus.Completed;
-                _context.DeviceActivities.Update(activity);
+                _db.DeviceActivities.Update(activity);
                 await Task.CompletedTask;
             }
             catch (Exception ex)
@@ -66,7 +56,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                await _context.DevicePresences.AddAsync(presence);
+                await _db.DevicePresences.AddAsync(presence);
             }
             catch (Exception ex)
             {
@@ -80,7 +70,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                await _context.Invoices.AddAsync(invoice);
+                await _db.Invoices.AddAsync(invoice);
             }
             catch (Exception ex)
             {
@@ -94,7 +84,7 @@ namespace DAM.Infrastructure.Persistence
         {
             try
             {
-                await _context.ServiceEvents.AddAsync(serviceEvent);
+                await _db.ServiceEvents.AddAsync(serviceEvent);
             }
             catch (Exception ex)
             {
@@ -106,7 +96,7 @@ namespace DAM.Infrastructure.Persistence
         /// <inheritdoc/>
         public async Task<IEnumerable<DeviceActivity>> GetActivitiesMissingInvoicesAsync()
         {
-            return await _context.DeviceActivities
+            return await _db.DeviceActivities
                         .Where(a => a.Status == ActivityStatus.Pending)
                         //.Include(a => a.FilesCopied) // Cargamos solo lo necesario para la factura
                         .AsNoTracking()
