@@ -2,6 +2,7 @@
 using DAM.Core.DTOs.DevicePresence;
 using DAM.Core.Features.Presence.Queries;
 using DAM.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
 
 namespace DAM.Infrastructure.Features.DevicePresence
 {
@@ -19,7 +20,8 @@ namespace DAM.Infrastructure.Features.DevicePresence
             GetPresenceByIdQuery query,
             CancellationToken cancellationToken)
         {
-            var entity = await repository.GetByIdAsync(query.Id, cancellationToken);
+            var entity = await repository.GetByIdAsync(query.Id, cancellationToken, 
+                                                       query => query.Include(x => x.DeviceActivity));
 
             return entity == null
                 ? null

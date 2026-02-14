@@ -4,6 +4,7 @@ using DAM.Core.DTOs.DevicePresence;
 using DAM.Core.Features.Presence.Queries;
 using DAM.Core.Interfaces;
 using DAM.Infrastructure.Extensions;
+using Microsoft.EntityFrameworkCore;
 namespace DAM.Infrastructure.Features.DevicePresence
 {
     /// <summary>
@@ -16,7 +17,7 @@ namespace DAM.Infrastructure.Features.DevicePresence
             GetPresencesQuery query,
             CancellationToken cancellationToken)
         {
-            return await repository.GetAllQueryable()
+            return await repository.GetAllQueryable(query => query.Include(x => x.DeviceActivity))
                 .OrderByDescending(x => x.Timestamp)
                 .ToPaginatedListAsync(
                     query.Filter.PageNumber,
