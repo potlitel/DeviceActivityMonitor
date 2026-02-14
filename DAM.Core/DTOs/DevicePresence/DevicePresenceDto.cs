@@ -26,6 +26,6 @@ namespace DAM.Core.DTOs.DevicePresence
     int Id,
     string SerialNumber,
     DateTime Timestamp,
-    DeviceActivityDto? ActivityDto
+    DeviceActivityDto ActivityDto
 );
 }

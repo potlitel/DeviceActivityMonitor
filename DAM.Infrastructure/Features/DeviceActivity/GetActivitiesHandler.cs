@@ -4,6 +4,7 @@ using DAM.Core.DTOs.DeviceActivity;
 using DAM.Core.Features.Activities.Queries;
 using DAM.Core.Interfaces;
 using DAM.Infrastructure.Extensions;
+using DAM.Core.FilterExtensions;
 
 namespace DAM.Infrastructure.Features.DeviceActivity
 {
@@ -35,6 +36,7 @@ namespace DAM.Infrastructure.Features.DeviceActivity
             CancellationToken cancellationToken)
         {
             return await repository.GetAllQueryable()
+                .ApplyActivityFilters(query.Filter)
                 .OrderByDescending(x => x.InsertedAt)
                 .ToPaginatedListAsync(
                     query.Filter.PageNumber,
