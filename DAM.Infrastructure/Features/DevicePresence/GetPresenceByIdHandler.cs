@@ -23,14 +23,7 @@ namespace DAM.Infrastructure.Features.DevicePresence
             var entity = await repository.GetByIdAsync(query.Id, cancellationToken, 
                                                        query => query.Include(x => x.DeviceActivity));
 
-            return entity == null
-                ? null
-                : new DevicePresenceDto(
-                    entity.Id,
-                    entity.SerialNumber,
-                    entity.Timestamp,
-                    null // TODO: Incluir DeviceActivity cuando esté disponible
-                );
+            return entity == null ? null : DevicePresenceDto.FromEntity(entity);
         }
     }
 }
