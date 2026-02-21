@@ -1,4 +1,6 @@
-﻿namespace DAM.Core.DTOs.Invoices
+﻿using DAM.Core.DTOs.DeviceActivity;
+
+namespace DAM.Core.DTOs.Invoices
 {
     /// <summary>
     /// DTO que representa una factura generada en el sistema.
@@ -18,12 +20,15 @@
     /// <param name="Timestamp">Fecha de generación de la factura.</param>
     /// <param name="TotalAmount">Monto total de la factura.</param>
     /// <param name="Description">Descripción detallada de la factura.</param>
-    public record InvoiceDto(
-    int Id,
-    string SerialNumber,
-    DateTime Timestamp,
-    decimal TotalAmount,
-    string Description
-    //TODO: Incluir la entidad DeviceActivity relacionada con cada factura!!!
-);
+    public record InvoiceDto(int Id, string SerialNumber, DateTime Timestamp,
+                             decimal TotalAmount, string Description, DeviceActivityDto ActivityDto)
+    {
+
+        public static InvoiceDto FromEntity(Entities.Invoice? entity) {
+            if (entity == null) return null!;
+
+            return new InvoiceDto(entity.Id, entity.SerialNumber, entity.Timestamp,
+                                  entity.TotalAmount, entity.Description, DeviceActivityDto.FromEntity(entity.DeviceActivity));
+        }
+    }
 }
