@@ -2,13 +2,15 @@
 using DAM.Core.Abstractions;
 using DAM.Core.Common;
 using DAM.Core.DTOs.Audit;
+using DAM.Core.DTOs.AuditLogs;
+using DAM.Core.Features.Audit.Queries;
 using DAM.Core.Features.Presence.Queries;
 using DAM.Infrastructure.CQRS;
 using FastEndpoints;
 
 namespace DAM.Api.Features.Audit;
 
-public record GetAuditLogsQuery(AuditLogFilter Filter) : IQuery<PaginatedList<AuditLogResponse>>;
+//public record GetAuditLogsQuery(AuditLogFilter Filter) : IQuery<PaginatedList<AuditLogResponse>>;
 
 /// <summary>
 /// 📋 Obtiene el historial completo de auditoría del sistema con capacidades avanzadas de filtrado.
@@ -57,7 +59,7 @@ public record GetAuditLogsQuery(AuditLogFilter Filter) : IQuery<PaginatedList<Au
 /// <response code="400">❌ Parámetros de filtrado inválidos</response>
 /// <response code="401">❌ No autenticado o token inválido</response>
 /// <response code="403">❌ No autorizado - Se requiere rol 'Manager'</response>
-public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, PaginatedList<AuditLogResponse>>
+public class GetAuditLogsEndpoint : BaseEndpoint<AuditLogFilter, PaginatedList<AuditLogDto>>
 {
     private readonly IDispatcher _dispatcher;
 
