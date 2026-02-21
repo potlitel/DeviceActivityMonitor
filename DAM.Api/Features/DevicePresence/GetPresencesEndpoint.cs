@@ -40,9 +40,9 @@ namespace DAM.Api.Features.DevicePresence
                 .ProducesProblem(400)
                 .ProducesProblem(401)
                 .ProducesProblem(403)
-                .WithTags("👤 Presencia")
+                .WithTags("👣 Presencia")
                 .WithDescription("""
-                # 👤 Endpoint de Presencia
+                # 👣 Endpoint de Presencia
                 
                 ## ✅ **Ejemplo CORRECTO (INT):**
                 ```

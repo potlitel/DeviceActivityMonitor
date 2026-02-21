@@ -27,18 +27,18 @@ public class PingEndpoint : EndpointWithoutRequest
 {
     public override void Configure()
     {
-        Get("/ping");
+        Get("/health/ping");
         AllowAnonymous();
 
         Summary(s =>
         {
-            s.Summary = "🔧 [Diagnóstico] Verificar estado del servicio";
+            s.Summary = "🛰️ [Diagnóstico] Verificar estado del servicio";
             s.Description = "Realiza un chequeo de salud (Health Check) básico para validar la conectividad con la API.";
             s.Responses[200] = "La conexión fue exitosa y el servidor está operativo.";
         });
 
         Description(x => x
-            .WithTags("🔧 Diagnóstico")
+            .WithTags("🖥️ Sistema")
             .Produces(200)
             .WithDescription("""
                 **Uso técnico:**

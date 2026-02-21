@@ -421,7 +421,10 @@ public static class ServiceCollectionExtensions
                                t.Contains("💰") ||
                                t.Contains("📱") ||
                                t.Contains("⚙️") ||
-                               t.Contains("🔧"))
+                               t.Contains("🔧") ||
+                               t.Contains("🖥️") ||
+                               t.Contains("👣") ||
+                               t.Contains("🪪"))
                     .ToList();
 
                 if (customTags.Any())
