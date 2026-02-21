@@ -46,9 +46,9 @@ public class GetProfileEndpoint(IDispatcher dispatcher)
             .ProducesProblem(401)
             .ProducesProblem(403)
             .ProducesProblem(404)
-            .WithTags("👤 Perfil"));
+            .WithTags("🪪 Perfil"));
 
-        Summary(s => s.Summary = "👤 [Perfil] Obtiene perfil del usuario actual");
+        Summary(s => s.Summary = "🪪 [Perfil] Obtiene perfil del usuario actual");
     }
 
     public override async Task HandleAsync(EmptyRequest req, CancellationToken ct)

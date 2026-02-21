@@ -11,9 +11,9 @@ public class LiveEndpoint : BaseEndpoint<EmptyRequest, LiveResponse>
     {
         Get("/health/live");
         AllowAnonymous();
-        Description(x => x.WithTags("🔧 Diagnóstico"));
+        Description(x => x.WithTags("🖥️ Sistema"));
         Summary(s => {
-            s.Summary = "🩺 [Health] Verificar vitalidad (Liveness)";
+            s.Summary = "💓 [Health] Verificar vitalidad (Liveness)";
             s.Description = "Confirma que el proceso de la API está en ejecución.";
         });
     }

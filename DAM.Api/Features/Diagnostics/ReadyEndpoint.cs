@@ -17,9 +17,9 @@ public class ReadyEndpoint : BaseEndpoint<EmptyRequest, ReadyResponse>
     {
         Get("/health/ready");
         AllowAnonymous();
-        Description(x => x.WithTags("🔧 Diagnóstico"));
+        Description(x => x.WithTags("🖥️ Sistema"));
         Summary(s => {
-            s.Summary = "🩺 [Health] Verificar preparación (Readiness)";
+            s.Summary = "🧪 [Health] Verificar preparación (Readiness)";
             s.Description = "Valida el estado de la Base de Datos y Almacenamiento.";
         });
     }
