@@ -37,7 +37,7 @@ namespace DAM.Api.Features.DevicePresence
                 .ProducesProblem(401)
                 .ProducesProblem(403)
                 .ProducesProblem(404)
-                .WithTags("👤 Presencia"));
+                .WithTags("👣 Presencia"));
 
         }
         public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)

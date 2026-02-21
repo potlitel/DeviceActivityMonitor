@@ -2,6 +2,7 @@
 using DAM.Core.DTOs.Invoices;
 using DAM.Core.Features.Invoices.Queries;
 using DAM.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
 using System.Text;
@@ -12,8 +13,9 @@ namespace DAM.Infrastructure.Features.Invoices.Handlers
     {
         public async Task<InvoiceDto?> HandleAsync(GetInvoiceByIdQuery q, CancellationToken ct)
         {
-            var x = await repository.GetByIdAsync(q.Id, ct);
-            return x == null ? null : new InvoiceDto(x.Id, x.SerialNumber, x.Timestamp, x.TotalAmount, x.Description);
+            var entity = await repository.GetByIdAsync(q.Id, ct, query => query.Include(x => x.DeviceActivity));
+            //return x == null ? null : new InvoiceDto(x.Id, x.SerialNumber, x.Timestamp, x.TotalAmount, x.Description);
+            return entity == null ? null : InvoiceDto.FromEntity(entity);
         }
     }
 }

@@ -22,10 +22,19 @@ namespace DAM.Core.DTOs.DevicePresence
     /// <param name="SerialNumber">Número de serie del dispositivo.</param>
     /// <param name="Timestamp">Marca temporal del evento.</param>
     /// <param name="ActivityDto">Actividad asociada (opcional).</param>
-    public record DevicePresenceDto(
-    int Id,
-    string SerialNumber,
-    DateTime Timestamp,
-    DeviceActivityDto ActivityDto
-);
+    public record DevicePresenceDto(int Id, string SerialNumber, DateTime Timestamp, DeviceActivityDto? Activity)
+    {
+        /// <summary>
+        /// Proyección que incluye la actividad relacionada utilizando el DTO correspondiente.
+        /// </summary>
+        public static DevicePresenceDto FromEntity(Entities.DevicePresence entity)
+        {
+            return new DevicePresenceDto(
+                entity.Id,
+                entity.SerialNumber,
+                entity.Timestamp,
+                DeviceActivityDto.FromEntity(entity.DeviceActivity)
+            );
+        }
+    }
 }
