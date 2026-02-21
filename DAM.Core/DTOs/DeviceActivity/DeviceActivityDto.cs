@@ -1,4 +1,5 @@
-﻿namespace DAM.Core.DTOs.DeviceActivity
+﻿
+namespace DAM.Core.DTOs.DeviceActivity
 {
     /// <summary>
     /// DTO que representa una actividad completa de un dispositivo en el sistema.
@@ -25,14 +26,45 @@
     /// <param name="ExtractedAt">Fecha y hora de extracción (null si aún activo).</param>
     /// <param name="InitialAvailableMB">Espacio disponible al inicio.</param>
     /// <param name="FinalAvailableMB">Espacio disponible al final.</param>
-    public record DeviceActivityDto(
-    int Id,
-    string SerialNumber,
-    string Model,
-    long TotalCapacityMB, 
-    DateTime? InsertedAt,
-    DateTime? ExtractedAt,
-    long InitialAvailableMB,
-    long FinalAvailableMB
-);
+    //public record DeviceActivityDto(
+    //int Id,
+    //string SerialNumber,
+    //string Model,
+    //long TotalCapacityMB,
+    //DateTime? InsertedAt,
+    //DateTime? ExtractedAt,
+    //long InitialAvailableMB,
+    //long FinalAvailableMB
+    //)
+    //{
+    //    /// <summary>
+    //    /// Proyección reutilizable para DeviceActivity.
+    //    /// </summary>
+    //    public static DeviceActivityDto FromEntity(DAM.Core.Entities.DeviceActivity? entity)
+    //    {
+    //        if (entity == null) return null!;
+
+    //        return new DeviceActivityDto(
+    //            entity.Id,
+    //            entity.SerialNumber,
+    //            entity.Model
+    //        // ... resto de campos
+    //        );
+    //    }
+    //};
+
+    public record DeviceActivityDto(int Id, string SerialNumber, string Model, long TotalCapacityMB, DateTime? InsertedAt,
+                                    DateTime? ExtractedAt, long InitialAvailableMB, long FinalAvailableMB)
+    {
+        /// <summary>
+        /// Proyección reutilizable para DeviceActivity.
+        /// </summary>
+        public static DeviceActivityDto FromEntity(Entities.DeviceActivity? entity)
+        {
+            if (entity == null) return null!;
+
+            return new DeviceActivityDto(entity.Id, entity.SerialNumber, entity.Model, entity.TotalCapacityMB, entity.InsertedAt,
+                                         entity.ExtractedAt, entity. InitialAvailableMB, entity.FinalAvailableMB);
+        }
+    }
 }

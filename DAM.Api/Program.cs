@@ -28,7 +28,7 @@ app.UseFastEndpointsPipeline();
 app.UseSwaggerWithUI();
 
 // 🩺 Health Checks
-app.MapHealthChecksWithUI();
+//app.MapHealthChecksWithUI();
 
 // 🌱 Inicialización de BD
 await app.EnsureDatabaseCreatedAsync();
