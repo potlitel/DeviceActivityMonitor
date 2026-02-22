@@ -1,4 +1,5 @@
-﻿<!DOCTYPE html>
+﻿@using Microsoft.AspNetCore.Components.Authorization
+@* <!DOCTYPE html>
 <html lang="en">
 
 <head>
@@ -18,4 +19,29 @@
     <script src="_framework/blazor.web.js"></script>
 </body>
 
+</html>
+ *@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <base href="/" />
+    <link rel="stylesheet" href="css/bootstrap/bootstrap.min.css" />
+    <link href="css/site.css" rel="stylesheet" />
+    <link href="DAM.Frontend.styles.css" rel="stylesheet" />
+    <link href="https://fonts.googleapis.com/css?family=Roboto:300,400,500,700&display=swap" rel="stylesheet" />
+    <link href="_content/MudBlazor/MudBlazor.min.css" rel="stylesheet" />
+    <HeadOutlet />
+</head>
+<body>
+    @* 👈 ESTO ES CRÍTICO - Provee AuthenticationState a toda la app *@
+    <CascadingAuthenticationState>
+        <Routes />
+    </CascadingAuthenticationState>
+    <script src="_framework/blazor.web.js"></script>
+    <script src="_content/MudBlazor/MudBlazor.min.js"></script>
+    <script src="js/theme.js"></script>
+</body>
 </html>
