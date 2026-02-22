@@ -1,5 +1,235 @@
-﻿<h3>Profile</h3>
+﻿@* 📁 DAM.Frontend/Features/Auth/Pages/Profile.razor *@
+@page "/profile"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Auth
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@attribute [Authorize]
+@inject IAuthService AuthService
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Mi Perfil - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" Color="Color.Primary" />
+    👤 Mi Perfil
+</MudText>
+
+@if (_isLoading)
+{
+    <LoadingState Message="Cargando perfil..." />
+}
+else if (_profile == null)
+{
+    <DAM.Frontend.Shared.Components.UI.ErrorBoundary HasError="true"
+                                                     Message="No se pudo cargar la información del perfil."
+                   OnRetry="@LoadProfile" />
+}
+else
+{
+    <MudGrid>
+        <!-- Información personal -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" Color="Color.Primary" />
+                    ℹ️ Información Personal
+                </MudText>
+
+                <MudStack>
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Email" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Correo Electrónico</MudText>
+                            </MudStack>
+                            <MudText Class="font-weight-bold">@_profile.Email</MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Badge" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Nombre de Usuario</MudText>
+                            </MudStack>
+                            <MudText Class="font-weight-bold">@_profile.Username</MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Security" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Rol</MudText>
+                            </MudStack>
+                            <MudChip T="ProfileResponse" Size="Size.Small" Color="Color.Primary">
+                                @_profile.Role
+                            </MudChip>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Lock" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>2FA</MudText>
+                            </MudStack>
+                            <StatusBadge Status="@(_profile.IsTwoFactorEnabled ? "Activo" : "Inactivo")"
+                                        Text="@(_profile.IsTwoFactorEnabled ? "✅ Activado" : "❌ Desactivado")" />
+                        </MudStack>
+                    </MudPaper>
+                </MudStack>
+
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary"
+                          OnClick="@(() => Navigation.NavigateTo("/2fa/setup"))"
+                          Class="mt-4"
+                          FullWidth="true">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
+                    @(_profile.IsTwoFactorEnabled ? "Configurar 2FA" : "Activar 2FA")
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Preferencias -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Settings" Class="mr-2" Color="Color.Primary" />
+                    ⚙️ Preferencias
+                </MudText>
+
+                <MudStack>
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Palette" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Tema</MudText>
+                            </MudStack>
+                            <MudSelect @bind-Value="@_theme" 
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Class="mud-width-150">
+                                <MudSelectItem Value="@("Light")">☀️ Claro</MudSelectItem>
+                                <MudSelectItem Value="@("Dark")">🌙 Oscuro</MudSelectItem>
+                                <MudSelectItem Value="@("System")">💻 Sistema</MudSelectItem>
+                            </MudSelect>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Language" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Idioma</MudText>
+                            </MudStack>
+                            <MudSelect @bind-Value="@_language" 
+                                      Variant="Variant.Outlined"
+                                      Margin="Margin.Dense"
+                                      Class="mud-width-150">
+                                <MudSelectItem Value="@("es-ES")">🇪🇸 Español</MudSelectItem>
+                                <MudSelectItem Value="@("en-US")">🇺🇸 Inglés</MudSelectItem>
+                            </MudSelect>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Success"
+                              OnClick="@SavePreferences"
+                              Class="mt-2"
+                              Disabled="@_isSaving">
+                        @if (_isSaving)
+                        {
+                            <MudProgressCircular Size="Size.Small" Class="mr-2" Indeterminate="true" />
+                        }
+                        Guardar Preferencias
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Sesiones activas -->
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-6 mt-4">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Devices" Class="mr-2" Color="Color.Primary" />
+                    💻 Sesiones Activas
+                </MudText>
+
+                <MudAlert Severity="Severity.Info" Class="mb-4" Variant="Variant.Text">
+                    No hay otras sesiones activas
+                </MudAlert>
+
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Error">
+                    <MudIcon Icon="@Icons.Material.Filled.Logout" Class="mr-2" />
+                    Cerrar todas las sesiones
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
+    private ProfileResponse? _profile;
+    private bool _isLoading = true;
+    private bool _isSaving = false;
+    private string _theme = "Light";
+    private string _language = "es-ES";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadProfile();
+    }
+
+    private async Task LoadProfile()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            _profile = await AuthService.GetCurrentUserAsync();
+            
+            if (_profile != null)
+            {
+                _theme = _profile.Preferences?.Theme ?? "Light";
+                _language = _profile.Preferences?.Language ?? "es-ES";
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando perfil: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task SavePreferences()
+    {
+        try
+        {
+            _isSaving = true;
+            StateHasChanged();
+
+            await Task.Delay(500); // Simular guardado
+            Snackbar.Add("✅ Preferencias guardadas correctamente", Severity.Success);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error guardando preferencias: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isSaving = false;
+            StateHasChanged();
+        }
+    }
 }

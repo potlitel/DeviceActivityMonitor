@@ -1,5 +1,197 @@
-﻿<h3>ActivityList</h3>
+﻿@* 📁 DAM.Frontend/Features/Activities/Pages/ActivityList.razor *@
+@page "/activities"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Activities
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@attribute [Authorize]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Actividades - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Usb" Class="mr-2" Color="Color.Primary" />
+    📋 Actividades de Dispositivos
+</MudText>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <!-- Panel de filtros -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
+        @* <MudTextField @bind-Value="@_filter.SerialNumber"
+                     Placeholder="🔍 Buscar por número de serie..."
+                     Variant="Variant.Outlined"
+                     Margin="Margin.Dense"
+                     Immediate="true"
+                     Clearable="true"
+                     Class="flex-grow-1" /> *@
+        <MudTextField @bind-Value="@_searchSerial"
+                      Placeholder="🔍 Buscar por número de serie..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      Clearable="true"
+                      Class="flex-grow-1" />
+        
+        @* <MudSelect @bind-Value="@_filter.Status"
+                  Placeholder="Todos los estados"
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Clearable="true"
+                  Class="mud-width-200">
+            <MudSelectItem Value="Active">🟢 Activos</MudSelectItem>
+            <MudSelectItem Value="Completed">⚪ Finalizados</MudSelectItem>
+        </MudSelect> *@
+        <MudSelect @bind-Value="@_selectedStatus"
+                   Placeholder="Todos los estados"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Clearable="true"
+                   Class="mud-width-200">
+            <MudSelectItem Value="@("Active")">🟢 Activos</MudSelectItem>
+            <MudSelectItem Value="@("Completed")">⚪ Finalizados</MudSelectItem>
+        </MudSelect>
+        
+        @* <MudIconButton Icon="@Icons.Material.Filled.Search"
+                      OnClick="@LoadActivities"
+                      Color="Color.Primary"
+                      Variant="Variant.Filled"
+                      Size="Size.Medium"
+                      Class="ml-2" /> *@
+        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                       OnClick="@(() => LoadActivities(1))" @* Al buscar, volvemos a pág 1 *@
+                       Color="Color.Primary"
+                       Variant="Variant.Filled"
+                       Size="Size.Medium"
+                       Class="ml-2" />
+        
+        @* <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                      OnClick="@LoadActivities"
+                      Size="Size.Medium"
+                      Variant="Variant.Outlined"
+                      Class="ml-2" /> *@
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                       OnClick="@(() => LoadActivities())"
+                       Size="Size.Medium"
+                       Variant="Variant.Outlined"
+                       Class="ml-2" />
+    </MudStack>
+
+    <!-- Grid de actividades -->
+    <DataGrid TItem="ActivityDto"
+              Items="@_activities"
+              Loading="@_isLoading"
+              ShowSearch="false"
+              ShowRefresh="false"
+              OnRefresh="@(async () => await LoadActivities())"
+              EmptyText="No hay actividades registradas">
+        
+        <HeaderTemplate>
+            <MudTh>#</MudTh>
+            <MudTh>📱 Serial</MudTh>
+            <MudTh>💾 Modelo</MudTh>
+            <MudTh>📊 Capacidad</MudTh>
+            <MudTh>⏰ Inserción</MudTh>
+            <MudTh>⏰ Extracción</MudTh>
+            <MudTh>💽 GB Procesados</MudTh>
+            <MudTh>📌 Estado</MudTh>
+            <MudTh>⚙️ Acciones</MudTh>
+        </HeaderTemplate>
+        
+        <RowTemplate>
+            <MudTd DataLabel="#">@context.Id</MudTd>
+            <MudTd DataLabel="Serial">
+                <MudText Class="font-weight-medium">@context.SerialNumber</MudText>
+            </MudTd>
+            <MudTd DataLabel="Modelo">@context.Model</MudTd>
+            <MudTd DataLabel="Capacidad">@(context.TotalCapacityMB / 1024) GB</MudTd>
+            <MudTd DataLabel="Inserción">
+                @context.InsertedAt?.ToString("dd/MM/yyyy HH:mm")
+            </MudTd>
+            <MudTd DataLabel="Extracción">
+                @context.ExtractedAt?.ToString("dd/MM/yyyy HH:mm") ?? "-"
+            </MudTd>
+            <MudTd DataLabel="GB Procesados">
+                <MudText Class="font-weight-bold">
+                    @context.GbProcessed.ToString("F2") GB
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Estado">
+                <StatusBadge Status="@(context.IsActive ? "Activo" : "Finalizado")"
+                            Text="@(context.IsActive ? "🟢 Activo" : "⚪ Finalizado")" />
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                              OnClick="@(() => Navigation.NavigateTo($"/activities/{context.Id}"))"
+                              Size="Size.Small"
+                              Variant="Variant.Text"
+                              Title="Ver detalles" />
+            </MudTd>
+        </RowTemplate>
+    </DataGrid>
+
+    <!-- Paginación -->
+    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+        <MudPagination Count="@_totalPages" 
+                       Selected="@_filter.PageNumber"
+                       SelectedChanged="@(async (page) => {
+                           _filter = _filter with { PageNumber = page };
+                           await LoadActivities();
+                       })"
+                       ShowFirstButton="true"
+                       ShowLastButton="true" />
+    </MudStack>
+</MudPaper>
 
 @code {
+    private ActivityFilter _filter = new(null, null, 1, 10);
 
+    // Variables locales mutables para evitar CS8852
+    private string? _searchSerial;
+    private string? _selectedStatus;
+
+    private List<ActivityDto> _activities = new();
+    private bool _isLoading = true;
+    private int _totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadActivities();
+    }
+
+    /// <summary>
+    /// Carga las actividades aplicando el estado actual de los filtros.
+    /// </summary>
+    /// <param name="page">Opcional: página específica a cargar.</param>
+    private async Task LoadActivities(int? page = null)
+    {
+        try
+        {
+            _isLoading = true;
+
+            // Actualizamos el record inmutable usando la expresión 'with'
+            // Si se pasa una página, la usamos; si no, mantenemos la actual del filtro.
+            _filter = _filter with
+            {
+                SerialNumber = _searchSerial,
+                Status = _selectedStatus,
+                PageNumber = page ?? _filter.PageNumber
+            };
+
+            var result = await ApiClient.GetActivitiesAsync(_filter);
+            _activities = result?.Items ?? new();
+            _totalPages = result?.TotalPages ?? 1;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando actividades: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }

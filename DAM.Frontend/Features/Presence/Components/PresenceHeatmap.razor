@@ -1,5 +1,157 @@
-﻿<h3>PresenceHeatmap</h3>
+﻿@* 📁 DAM.Frontend/Features/Presence/Components/PresenceHeatmap.razor *@
+@namespace DAM.Frontend.Features.Presence.Components
+@using DAM.Frontend.Core.Models.Presence
+@* @using System.Globalization *@
+@using MudBlazor
+
+<MudCard Elevation="1" Class="mt-4">
+    <MudCardHeader>
+        <CardHeaderContent>
+            <MudText Typo="Typo.h6">
+                <MudIcon Icon="@Icons.Material.Filled.Whatshot" Class="mr-2" Color="Color.Error" />
+                🔥 Mapa de Calor de Presencia
+            </MudText>
+        </CardHeaderContent>
+        <CardHeaderActions>
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh" 
+                          OnClick="@OnRefresh"
+                          Size="Size.Small" />
+        </CardHeaderActions>
+    </MudCardHeader>
+    <MudCardContent>
+        @if (_isLoading)
+        {
+            <MudStack AlignItems="AlignItems.Center" Class="py-12">
+                <MudProgressCircular Indeterminate="true" Size="Size.Medium" />
+                <MudText Class="mt-4 grey--text">Generando mapa de calor...</MudText>
+            </MudStack>
+        }
+        else
+        {
+            <MudGrid>
+                @for (int day = 0; day < 7; day++)
+                {
+                    <MudItem xs="12" sm="6" md="4" lg="3">
+                        <MudPaper Class="pa-4 text-center" Outlined="true">
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">
+                                @GetDayName(day)
+                            </MudText>
+                            <MudStack Row="true" Justify="Justify.Center" Class="mt-4">
+                                @for (int hour = 0; hour < 24; hour += 3)
+                                {
+                                    var intensity = GetHeatIntensity(day, hour);
+                                    <div class="heatmap-cell"
+                                         style="background-color: @GetHeatColor(intensity);
+                                                width: 30px;
+                                                height: 30px;
+                                                border-radius: 4px;
+                                                margin: 2px;
+                                                cursor: pointer;"
+                                         title="@GetTooltip(day, hour)"
+                                         @onclick="() => OnHeatmapCellClick(day, hour)">
+                                    </div>
+                                }
+                            </MudStack>
+                            <MudText Typo="Typo.caption" Class="mt-2 grey--text">
+                                @GetDayHours()
+                            </MudText>
+                        </MudPaper>
+                    </MudItem>
+                }
+            </MudGrid>
+        }
+
+        <MudText Class="mt-4 text-center grey--text" Typo="Typo.caption">
+            Intensidad: <span class="heatmap-legend" style="background-color: #ebedf0"></span> Baja
+            <span class="heatmap-legend" style="background-color: #9be9a8; margin-left: 8px;"></span> Media
+            <span class="heatmap-legend" style="background-color: #30a14e; margin-left: 8px;"></span> Alta
+            <span class="heatmap-legend" style="background-color: #216e39; margin-left: 8px;"></span> Muy Alta
+        </MudText>
+    </MudCardContent>
+</MudCard>
 
 @code {
+    [Parameter] public List<PresenceDto>? Presences { get; set; }
+    [Parameter] public EventCallback<(int Day, int Hour)> OnCellClick { get; set; }
+    [Parameter] public EventCallback OnRefresh { get; set; }
 
+    private bool _isLoading = false;
+    private Dictionary<(int Day, int Hour), int> _heatmapData = new();
+
+    protected override void OnParametersSet()
+    {
+        GenerateHeatmap();
+    }
+
+    private void GenerateHeatmap()
+    {
+        _isLoading = true;
+        StateHasChanged();
+
+        try
+        {
+            _heatmapData.Clear();
+
+            if (Presences != null)
+            {
+                foreach (var presence in Presences)
+                {
+                    var day = (int)presence.Timestamp.DayOfWeek;
+                    var hour = presence.Timestamp.Hour;
+                    var key = (day, hour);
+
+                    if (_heatmapData.ContainsKey(key))
+                        _heatmapData[key]++;
+                    else
+                        _heatmapData[key] = 1;
+                }
+            }
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private int GetHeatIntensity(int day, int hour)
+    {
+        return _heatmapData.GetValueOrDefault((day, hour));
+    }
+
+    private string GetHeatColor(int intensity)
+    {
+        return intensity switch
+        {
+            0 => "#ebedf0",
+            <= 2 => "#9be9a8",
+            <= 5 => "#30a14e",
+            _ => "#216e39"
+        };
+    }
+
+    private string GetTooltip(int day, int hour)
+    {
+        var intensity = GetHeatIntensity(day, hour);
+        return $"{GetDayName(day)} {hour:00}:00 - {hour + 3:00}:00\n{intensity} eventos";
+    }
+
+    private string GetDayName(int day) => day switch
+    {
+        0 => "Domingo",
+        1 => "Lunes",
+        2 => "Martes",
+        3 => "Miércoles",
+        4 => "Jueves",
+        5 => "Viernes",
+        6 => "Sábado",
+        _ => ""
+    };
+
+    private string GetDayHours() => "0-3  3-6  6-9  9-12  12-15  15-18  18-21  21-24";
+
+    private async Task OnHeatmapCellClick(int day, int hour)
+    {
+        await OnCellClick.InvokeAsync((day, hour));
+    }
 }

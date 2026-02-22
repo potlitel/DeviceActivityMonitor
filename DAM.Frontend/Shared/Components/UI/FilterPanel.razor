@@ -1,5 +1,51 @@
-﻿<h3>FilterPanel</h3>
+﻿@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/UI/FilterPanel.razor *@
+@typeparam TFilter where TFilter : class, new()
+
+<MudPaper Elevation="1" Class="pa-4 mb-6">
+    <MudStack>
+        <MudText Typo="Typo.h6">
+            <MudIcon Icon="@Icons.Material.Filled.FilterList" Class="mr-2" Color="Color.Primary" />
+            @Title
+        </MudText>
+
+        <MudGrid>
+            @ChildContent
+        </MudGrid>
+
+        <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+            <MudButton Variant="Variant.Outlined" 
+                      Color="Color.Default" 
+                      OnClick="@OnClear">
+                <MudIcon Icon="@Icons.Material.Filled.Clear" Class="mr-2" />
+                Limpiar
+            </MudButton>
+
+            <MudButton Variant="Variant.Filled" 
+                      Color="Color.Primary" 
+                      OnClick="@OnSearch"
+                      Disabled="@IsSearching">
+                @if (IsSearching)
+                {
+                    <MudProgressCircular Size="Size.Small" Class="mr-2" Indeterminate="true" />
+                }
+                else
+                {
+                    <MudIcon Icon="@Icons.Material.Filled.Search" Class="mr-2" />
+                }
+                Buscar
+            </MudButton>
+        </MudStack>
+    </MudStack>
+</MudPaper>
 
 @code {
+    [Parameter] public string Title { get; set; } = "Filtros de Búsqueda";
+    [Parameter] public RenderFragment ChildContent { get; set; } = null!;
+    [Parameter] public EventCallback OnSearchCallback { get; set; }
+    [Parameter] public EventCallback OnClearCallback { get; set; }
+    [Parameter] public bool IsSearching { get; set; }
 
+    private async Task OnSearch() => await OnSearchCallback.InvokeAsync();
+    private async Task OnClear() => await OnClearCallback.InvokeAsync();
 }

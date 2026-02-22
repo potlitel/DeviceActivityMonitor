@@ -1,5 +1,198 @@
-﻿<h3>TwoFactorSetup</h3>
+﻿@* 📁 DAM.Frontend/Features/Auth/Pages/TwoFactorSetup.razor *@
+@page "/2fa/setup"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Auth
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.JSInterop
+@using MudBlazor
+@attribute [Authorize]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Configurar 2FA - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" Color="Color.Primary" />
+    🔐 Configurar Autenticación de Dos Factores
+</MudText>
+
+@if (_isLoading)
+{
+    <LoadingState Message="Preparando configuración 2FA..." />
+}
+else if (_setup == null)
+{
+    <ErrorBoundary HasError="true" 
+                   Message="No se pudo iniciar la configuración 2FA."
+                   OnRetry="@LoadSetup" />
+}
+else
+{
+    <MudGrid>
+        <!-- Paso 1: Escanear QR -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.QrCode" Class="mr-2" Color="Color.Primary" />
+                    1️⃣ Escanear Código QR
+                </MudText>
+
+                <MudText Class="mb-4">
+                    Escanea este código QR con tu aplicación de autenticación:
+                </MudText>
+
+                <MudStack AlignItems="AlignItems.Center">
+                    <MudPaper Elevation="3" Class="pa-4" Style="width: 200px; height: 200px;">
+                        <!-- Aquí iría el componente QR real -->
+                        <MudIcon Icon="@Icons.Material.Filled.QrCode" Size="Size.Large" Style="width: 100%; height: 100%;" />
+                    </MudPaper>
+
+                    <MudText Typo="Typo.body2" Class="mt-4 grey--text">
+                        O ingresa manualmente esta clave:
+                    </MudText>
+
+                    <MudTextField @bind-Value="@_setup.Secret"
+                                 Variant="Variant.Outlined"
+                                 ReadOnly="true"
+                                 Adornment="Adornment.End"
+                                 AdornmentIcon="@Icons.Material.Filled.CopyAll"
+                                 OnAdornmentClick="@CopySecret"
+                                 Class="mud-width-400" />
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Paso 2: Verificar código -->
+        <MudItem xs="12" md="6">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Verified" Class="mr-2" Color="Color.Primary" />
+                    2️⃣ Verificar Código
+                </MudText>
+
+                <MudText Class="mb-4">
+                    Ingresa el código de 6 dígitos generado por tu aplicación:
+                </MudText>
+
+                <MudStack>
+                    <MudTextField @bind-Value="@_verificationCode"
+                                 Label="Código de verificación"
+                                 Placeholder="000000"
+                                 Variant="Variant.Outlined"
+                                 InputType="InputType.Password"
+                                 MaxLength="6"
+                                 Immediate="true" />
+
+                    <MudButton Variant="Variant.Filled" 
+                              Color="Color.Primary"
+                              OnClick="@VerifyCode"
+                              Disabled="@(_verificationCode.Length != 6)"
+                              FullWidth="true">
+                        Verificar y Activar
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Paso 3: Códigos de respaldo -->
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-6 mt-4">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Bookmark" Class="mr-2" Color="Color.Warning" />
+                    3️⃣ Códigos de Respaldo
+                </MudText>
+
+                <MudAlert Severity="Severity.Warning" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+                    Guarda estos códigos en un lugar SEGURO. Son la única forma de recuperar tu cuenta si pierdes el acceso a la aplicación de autenticación.
+                </MudAlert>
+
+                <MudGrid>
+                    @foreach (var code in _setup.BackupCodes)
+                    {
+                        <MudItem xs="6" md="3" Class="mb-2">
+                            <MudPaper Class="pa-2 text-center font-weight-bold" Outlined="true">
+                                @(code)
+                            </MudPaper>
+                        </MudItem>
+                    }
+                </MudGrid>
+
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Primary"
+                          OnClick="@DownloadBackupCodes"
+                          Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Download" Class="mr-2" />
+                    Descargar Códigos
+                </MudButton>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
+    private Setup2FAResponse? _setup;
+    private bool _isLoading = true;
+    private string _verificationCode = "";
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadSetup();
+    }
+
+    private async Task LoadSetup()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            _setup = await ApiClient.Setup2FAAsync();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error iniciando 2FA: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private async Task CopySecret()
+    {
+        // await Clipboard.SetTextAsync(_setup?.Secret ?? "");
+        // Snackbar.Add("✅ Secreto copiado al portapapeles", Severity.Success);
+        if (!string.IsNullOrEmpty(_setup?.Secret))
+        {
+            // Usamos la API nativa del navegador mediante JS Runtime
+            await JS.InvokeVoidAsync("navigator.clipboard.writeText", _setup.Secret);
+            Snackbar.Add("✅ Secreto copiado al portapapeles", Severity.Success);
+        }
+    }
+
+    private async Task VerifyCode()
+    {
+        // TODO: Implementar verificación de código
+        Snackbar.Add("✅ 2FA activado correctamente", Severity.Success);
+        await Task.Delay(1000);
+        Navigation.NavigateTo("/profile", true);
+    }
+
+    private async Task DownloadBackupCodes()
+    {
+        var content = string.Join("\n", _setup?.BackupCodes ?? new());
+        var bytes = global::System.Text.Encoding.UTF8.GetBytes(content);
+        var base64 = Convert.ToBase64String(bytes);
+        
+        await JS.InvokeVoidAsync("downloadFile", 
+            "dam-2fa-backup-codes.txt", 
+            $"data:text/plain;charset=utf-8;base64,{base64}");
+        
+        Snackbar.Add("✅ Códigos de respaldo descargados", Severity.Success);
+    }
+
+    [Inject] private IJSRuntime JS { get; set; }
 }

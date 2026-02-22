@@ -1,5 +1,206 @@
-﻿<h3>Login</h3>
+﻿@* 📁 DAM.Frontend/Features/Auth/Pages/Login.razor *@
+@page "/auth/login"
+@using DAM.Frontend.Core.Models.Auth
+@using DAM.Frontend.Core.Interfaces
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@using global::System.ComponentModel.DataAnnotations
+
+@* 🚨 ESTO ES CRÍTICO - SIN ESTO, HAY LOOP INFINITO *@
+@attribute [AllowAnonymous]
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Class="mb-6">
+            <MudAvatar Color="Color.Primary" Size="Size.Large" Variant="Variant.Filled">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" />
+            </MudAvatar>
+            
+            <MudText Typo="Typo.h4" Align="Align.Center" Class="mt-4">
+                DAM - Device Activity Monitor
+            </MudText>
+            
+            <MudText Typo="Typo.body2" Class="grey--text" Align="Align.Center">
+                Inicie sesión para acceder al panel de monitoreo
+            </MudText>
+        </MudStack>
+
+        @* Mensaje de credenciales de prueba *@
+        <MudAlert Severity="Severity.Info" Class="mb-6" Variant="Variant.Text">
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                <MudText>Credenciales de prueba: admin@dam.com / Admin123!</MudText>
+            </MudStack>
+        </MudAlert>
+
+        @* Formulario de login *@
+        <EditForm Model="@_loginModel" OnValidSubmit="@HandleLogin">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-error mb-4" />
+            
+            <MudStack>
+                <MudTextField @bind-Value="@_loginModel.Email"
+                            For="@(() => _loginModel.Email)"
+                            Label="Correo electrónico"
+                            Placeholder="ejemplo@dam.com"
+                            Variant="Variant.Outlined"
+                            Adornment="Adornment.Start"
+                            AdornmentIcon="@Icons.Material.Filled.Email"
+                            Required="true"
+                            RequiredError="El correo electrónico es obligatorio"
+                            Disabled="@_isLoading" />
+
+                <MudTextField @bind-Value="@_loginModel.Password"
+                            For="@(() => _loginModel.Password)"
+                            Label="Contraseña"
+                            Placeholder="••••••••"
+                            Variant="Variant.Outlined"
+                            Adornment="Adornment.Start"
+                            AdornmentIcon="@Icons.Material.Filled.Lock"
+                            InputType="InputType.Password"
+                            Required="true"
+                            RequiredError="La contraseña es obligatoria"
+                            Disabled="@_isLoading" />
+
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-2">
+                    <MudCheckBox  T="bool"
+                                  @bind-Checked="@_rememberMe"
+                                  Color="Color.Primary"
+                                  Disabled="@_isLoading">
+                        <MudText>Recordarme</MudText>
+                    </MudCheckBox>
+
+                    <MudLink Href="/auth/forgot-password" 
+                            Typo="Typo.body2"
+                            Disabled="@_isLoading">
+                        ¿Olvidó su contraseña?
+                    </MudLink>
+                </MudStack>
+
+                <MudButton ButtonType="ButtonType.Submit"
+                          Color="Color.Primary"
+                          Size="Size.Large"
+                          Variant="Variant.Filled"
+                          FullWidth="true"
+                          Class="mt-4"
+                          Disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Class="mr-2" Indeterminate="true" />
+                        <span>Iniciando sesión...</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Login" Class="mr-2" />
+                        <span>Iniciar Sesión</span>
+                    }
+                </MudButton>
+            </MudStack>
+        </EditForm>
+
+        @* Separador *@
+        <MudDivider Class="my-6" />
+
+        @* Enlace a registro (opcional) *@
+        <MudText Align="Align.Center" Class="grey--text">
+            ¿No tiene una cuenta? 
+            <MudLink Href="/auth/register" Color="Color.Primary">
+                Regístrese aquí
+            </MudLink>
+        </MudText>
+    </MudPaper>
+
+    @* Versión y copyright *@
+    <MudText Align="Align.Center" Typo="Typo.caption" Class="mt-8 grey--text">
+        © @DateTime.Now.Year DAM - Device Activity Monitor. v1.0.0
+    </MudText>
+</MudContainer>
 
 @code {
+    [Inject] private IAuthService AuthService { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
 
+    private LoginModel _loginModel = new();
+    private bool _rememberMe = false;
+    private bool _isLoading = false;
+
+    /// <summary>
+    /// Modelo de login con validaciones
+    /// </summary>
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
+        [EmailAddress(ErrorMessage = "El formato del correo electrónico no es válido")]
+        [StringLength(100, ErrorMessage = "El correo no puede exceder los 100 caracteres")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        [StringLength(50, MinimumLength = 6, ErrorMessage = "La contraseña debe tener entre 6 y 50 caracteres")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Maneja el envío del formulario de login
+    /// </summary>
+    private async Task HandleLogin()
+    {
+        if (_isLoading) return;
+
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+
+            if (success)
+            {
+                Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success, config =>
+                {
+                    config.Icon = Icons.Material.Filled.CheckCircle;
+                    config.VisibleStateDuration = 3000;
+                });
+
+                // Redirigir al dashboard
+                Navigation.NavigateTo("/", true);
+            }
+            else
+            {
+                Snackbar.Add("❌ Credenciales inválidas. Por favor, intente nuevamente.", Severity.Error, config =>
+                {
+                    config.Icon = Icons.Material.Filled.Error;
+                    config.VisibleStateDuration = 5000;
+                });
+                
+                _loginModel.Password = string.Empty;
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error de conexión: {ex.Message}", Severity.Error, config =>
+            {
+                config.Icon = Icons.Material.Filled.Error;
+                config.VisibleStateDuration = 5000;
+            });
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    /// <summary>
+    /// Redirigir si ya está autenticado
+    /// </summary>
+    protected override async Task OnInitializedAsync()
+    {
+        var isAuthenticated = await AuthService.IsAuthenticatedAsync();
+        if (isAuthenticated)
+        {
+            Navigation.NavigateTo("/", true);
+        }
+    }
 }

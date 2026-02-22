@@ -1,5 +1,146 @@
-﻿<h3>PresenceList</h3>
+﻿@* 📁 DAM.Frontend/Features/Presence/Pages/PresenceList.razor *@
+@page "/presence"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Presence
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@attribute [Authorize]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Eventos de Presencia - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.OnlinePrediction" Class="mr-2" Color="Color.Primary" />
+    👤 Eventos de Presencia
+</MudText>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <!-- Filtros -->
+    <MudStack Row="true" AlignItems="AlignItems.Center" Class="mb-6">
+        @* <MudTextField @bind-Value="@_filter.ActivityId"
+                     Placeholder="🔍 Filtrar por ID de actividad..."
+                     Variant="Variant.Outlined"
+                     Margin="Margin.Dense"
+                     Immediate="true"
+                     Clearable="true"
+                     Class="flex-grow-1" /> *@
+        <MudTextField @bind-Value="@_searchActivityId"
+                  Placeholder="🔍 Filtrar por ID de actividad..."
+                  Variant="Variant.Outlined"
+                  Margin="Margin.Dense"
+                  Immediate="true"
+                  Clearable="true"
+                  Class="flex-grow-1" />
+        
+        <MudIconButton Icon="@Icons.Material.Filled.Search"
+                      OnClick="@LoadPresence"
+                      Color="Color.Primary"
+                      Variant="Variant.Filled"
+                      Size="Size.Medium"
+                      Class="ml-2" />
+        
+        <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                      OnClick="@LoadPresence"
+                      Size="Size.Medium"
+                      Variant="Variant.Outlined"
+                      Class="ml-2" />
+    </MudStack>
+
+    <!-- Grid de eventos -->
+    <DataGrid TItem="PresenceDto"
+             Items="@_presenceEvents"
+             Loading="@_isLoading"
+             ShowSearch="false"
+             ShowRefresh="false"
+             EmptyText="No hay eventos de presencia registrados">
+        
+        <HeaderTemplate>
+            <MudTh>#</MudTh>
+            <MudTh>📱 Serial</MudTh>
+            <MudTh>⏰ Fecha y Hora</MudTh>
+            <MudTh>🆔 Actividad</MudTh>
+            <MudTh>⚙️ Acciones</MudTh>
+        </HeaderTemplate>
+        
+        <RowTemplate>
+            <MudTd DataLabel="#">@context.Id</MudTd>
+            <MudTd DataLabel="Serial">
+                <MudText Class="font-weight-medium">@context.SerialNumber</MudText>
+            </MudTd>
+            <MudTd DataLabel="Fecha">
+                @context.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+            </MudTd>
+            <MudTd DataLabel="Actividad">
+                @if (context.ActivityId.HasValue)
+                {
+                    <MudChip T="PresenceFilter" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                        @context.ActivityId
+                    </MudChip>
+                }
+                else
+                {
+                    <MudText Typo="Typo.body2" Class="grey--text">-</MudText>
+                }
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                              OnClick="@(() => Navigation.NavigateTo($"/presence/{context.Id}"))"
+                              Size="Size.Small"
+                              Variant="Variant.Text"
+                              Title="Ver detalles" />
+            </MudTd>
+        </RowTemplate>
+    </DataGrid>
+
+    <!-- Paginación -->
+    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+        <MudPagination Count="@_totalPages" 
+                       Selected="@_filter.PageNumber"
+                       SelectedChanged="@(async (page) => { 
+                            _filter = _filter with { PageNumber = page }; 
+                            await LoadPresence(); 
+                       })"
+                       ShowFirstButton="true"
+                       ShowLastButton="true" />
+    </MudStack>
+</MudPaper>
 
 @code {
+    private PresenceFilter _filter = new();
+    
+    // VARIABLE LOCAL PARA BINDING
+    // Nota: MudTextField puede parsear Guid directamente, pero lo guardamos en variable local
+    private Guid? _searchActivityId;
 
+    private List<PresenceDto> _presenceEvents = new();
+    private bool _isLoading = true;
+    private int _totalPages = 1;
+
+    protected override async Task OnInitializedAsync() => await LoadPresence();
+
+    private async Task LoadPresence()
+    {
+        try
+        {
+            _isLoading = true;
+
+            // Actualizamos el record inmutable
+            _filter = _filter with { ActivityId = _searchActivityId };
+
+            var result = await ApiClient.GetPresenceAsync(_filter);
+            _presenceEvents = result?.Items ?? new();
+            _totalPages = result?.TotalPages ?? 1;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando presencia: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }
