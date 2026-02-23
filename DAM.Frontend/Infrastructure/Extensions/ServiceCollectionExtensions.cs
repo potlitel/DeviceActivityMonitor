@@ -2,6 +2,7 @@
 using DAM.Frontend.Infrastructure.Authentication;
 using DAM.Frontend.Infrastructure.Services;
 using Microsoft.AspNetCore.Components.Authorization;
+using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
 using MudBlazor;
 using MudBlazor.Services;
 

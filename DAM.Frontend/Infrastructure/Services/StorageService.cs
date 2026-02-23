@@ -108,6 +108,62 @@ public class StorageService : IStorageService
         }
     }
 
+    //public async Task SetAsync<T>(string key, T value)
+    //{
+    //    if (string.IsNullOrWhiteSpace(key))
+    //        throw new ArgumentException("La clave no puede estar vacía", nameof(key));
+
+    //    if (value == null)
+    //        throw new ArgumentNullException(nameof(value), "No se puede guardar un valor nulo");
+
+    //    try
+    //    {
+    //        _logger.LogDebug("💾 Guardando en storage: {Key} (Tipo: {Type})", key, typeof(T).Name);
+
+    //        string stringValue;
+
+    //        // ✅ CASO 1: Ya es string
+    //        if (value is string str)
+    //        {
+    //            stringValue = str;
+    //            _logger.LogDebug("📝 Valor directo string, longitud: {Length}", str.Length);
+    //        }
+    //        // ✅ CASO 2: Es otro tipo, serializar
+    //        else
+    //        {
+    //            stringValue = JsonSerializer.Serialize(value, _jsonOptions);
+    //            _logger.LogDebug("📄 Serializado a JSON: {JsonLength} caracteres", stringValue.Length);
+    //        }
+
+    //        // 🚨 VERIFICAR QUE NO ESTÉ VACÍO
+    //        if (string.IsNullOrEmpty(stringValue))
+    //        {
+    //            _logger.LogError("❌ El valor serializado está vacío para {Key}", key);
+    //            return;
+    //        }
+
+    //        await _localStorage.SetAsync(key, stringValue);
+
+    //        // ✅ VERIFICACIÓN OPCIONAL
+    //        var verify = await _localStorage.GetAsync<string>(key);
+    //        _logger.LogDebug("✅ Verificación: {Result}", verify.Success ? "OK" : "FALLÓ");
+    //    }
+    //    catch (InvalidOperationException ex) 
+    //    {
+    //        _logger.LogWarning("⚠️ Intento de guardar en storage durante prerendering: {Key}", key);
+    //    }
+    //    catch (JsonException ex)
+    //    {
+    //        _logger.LogError(ex, "❌ Error de serialización JSON para {Key}", key);
+    //        throw new InvalidOperationException($"No se pudo serializar el valor para {key}", ex);
+    //    }
+    //    catch (Exception ex)
+    //    {
+    //        _logger.LogError(ex, "❌ Error guardando {Key} en storage", key);
+    //        throw;
+    //    }
+    //}
+
     /// <inheritdoc/>
     public async Task RemoveAsync(string key)
     {
