@@ -80,16 +80,38 @@ namespace DAM.Frontend.Infrastructure.Services
             }
         }
 
+        //private async Task<T?> HandleResponseAsync<T>(HttpResponseMessage response)
+        //{
+        //    if (!response.IsSuccessStatusCode)
+        //    {
+        //        _logger.LogWarning("Request failed: {StatusCode} - {Reason}",
+        //            (int)response.StatusCode, response.ReasonPhrase);
+        //        return default;
+        //    }
+
+        //    return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+        //}
         private async Task<T?> HandleResponseAsync<T>(HttpResponseMessage response)
         {
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("Request failed: {StatusCode} - {Reason}",
-                    (int)response.StatusCode, response.ReasonPhrase);
+                _logger.LogWarning("Request failed: {StatusCode}", (int)response.StatusCode);
                 return default;
             }
 
-            return await response.Content.ReadFromJsonAsync<T>(_jsonOptions);
+            // 🛠️ Leemos el envoltorio completo primero
+            var wrapper = await response.Content.ReadFromJsonAsync<ApiResponse<T>>(_jsonOptions);
+
+            if (wrapper == null) return default;
+
+            if (!wrapper.Success)
+            {
+                _logger.LogWarning("API Error: {Message}", wrapper.Message);
+                return default;
+            }
+
+            // ✅ Retornamos solo el contenido de "data"
+            return wrapper.Data;
         }
 
         private string BuildUrl(string endpoint, object? query)

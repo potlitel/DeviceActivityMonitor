@@ -60,16 +60,14 @@ namespace DAM.Frontend.Infrastructure.Extensions
 
         private static byte[] ParseBase64WithoutPadding(string base64)
         {
-            //base64 = base64.Length % 4 switch
-            //{
-            //    2 => base64 + "==",
-            //    3 => base64 + "=",
-            //    _ => base64
-            //};
+            base64 = (base64.Length % 4) switch
+            {
+                2 => base64 + "==",
+                3 => base64 + "=",
+                _ => base64
+            };
 
-            //return Convert.FromBase64String(base64);
-
-            return null!;
+            return Convert.FromBase64String(base64);
         }
     }
 }

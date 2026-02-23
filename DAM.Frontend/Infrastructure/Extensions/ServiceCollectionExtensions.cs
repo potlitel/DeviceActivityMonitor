@@ -14,13 +14,14 @@ namespace DAM.Frontend.Infrastructure.Extensions
             IConfiguration configuration)
         {
             // 📦 Storage
+            services.AddScoped<ProtectedLocalStorage>();
             services.AddScoped<IStorageService, StorageService>();
 
             // 🌐 HTTP Client
             services.AddHttpClient<IApiClient, ApiClient>(client =>
             {
                 client.BaseAddress = new Uri(configuration["Api:BaseUrl"] ??
-                    "https://localhost:5001/api/");
+                    "https://localhost:7156/api/");
                 client.DefaultRequestHeaders.Add("Accept", "application/json");
                 client.DefaultRequestHeaders.Add("User-Agent", "DAM.Frontend/1.0");
                 client.Timeout = TimeSpan.FromSeconds(30);
