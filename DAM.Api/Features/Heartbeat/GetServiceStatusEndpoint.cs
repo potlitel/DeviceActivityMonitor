@@ -12,9 +12,10 @@ namespace DAM.Api.Features.Heartbeat
             AllowAnonymous();
         }
 
-        public override async Task HandleAsync(CancellationToken ct)
+        public override async Task HandleAsync(string req, CancellationToken ct)
         {
-            var serviceName = Route<string>("serviceName") ?? "DAM";
+            //var serviceName = Route<string>("serviceName") ?? "DAM";
+            var serviceName = req;
             var status = await cache.GetAsync<HeartbeatDto>($"ServiceStatus_{serviceName}");
 
             if (status == null)
