@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Constants;
+using DAM.Core.DTOs.Heartbeat;
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using DAM.Core.Settings;
@@ -104,6 +105,25 @@ namespace DAM.Infrastructure.Storage
         public async Task UpdateActivityAsync(DeviceActivity activity)
         {
             await (await GetCurrentStorageStrategy()).UpdateActivityAsync(activity);
+        }
+
+        /// <inheritdoc/>
+        public async Task SendHeartbeatAsync(HeartbeatDto heartbeat)
+        {
+            // Determinamos la estrategia actual
+            var strategy = await GetCurrentStorageStrategy();
+
+            // El Heartbeat SOLO se envía si la estrategia actual es la API.
+            // No tiene sentido persistir un "latido de corazón" en SQLite para enviarlo después,
+            // porque el estado de salud es útil solo en tiempo real.
+            if (strategy is ApiStorageService apiService)
+            {
+                await apiService.SendHeartbeatAsync(heartbeat);
+            }
+            else
+            {
+                _logger.LogTrace("Heartbeat omitido: La API no está disponible y no se requiere persistencia local para estados volátiles.");
+            }
         }
 
         public async Task BeginTransactionAsync() => await (await GetCurrentStorageStrategy()).BeginTransactionAsync();

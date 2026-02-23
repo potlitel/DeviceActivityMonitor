@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.DTOs.Heartbeat;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 
 namespace DAM.Infrastructure.Storage
@@ -48,6 +49,12 @@ namespace DAM.Infrastructure.Storage
         public Task UpdateActivityAsync(DeviceActivity activity)
         {
             return _uow.Activities.UpdateActivityAsync(activity);
+        }
+
+        public Task SendHeartbeatAsync(HeartbeatDto heartbeat)
+        {
+            // Implementación vacía intencional (Pattern: No-Op)
+            return Task.CompletedTask;
         }
 
         public Task BeginTransactionAsync() => _uow.BeginTransactionAsync();

@@ -1,4 +1,5 @@
 using DAM.Core.Constants;
+using DAM.Core.DTOs.Heartbeat;
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using DAM.Host.WindowsService.Monitoring;
@@ -75,8 +76,63 @@ public class Worker : BackgroundService
 
         _logger.LogInformation(WorkerMessages.Log.MonitoringStarted);
 
+        // 3. BUCLE DE HEARTBEAT (Latido de corazón)
+        while (!stoppingToken.IsCancellationRequested)
+        {
+            try
+            {
+                await SendHeartbeatAsync();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogWarning("No se pudo enviar el latido de corazón: {Message}", ex.Message);
+            }
+
+            // Esperar 30 segundos antes del próximo latido
+            await Task.Delay(TimeSpan.FromSeconds(30), stoppingToken);
+        }
+
         // El Worker se mantiene en ejecución hasta que se solicita la detención.
         await Task.Delay(Timeout.Infinite, stoppingToken);
+    }
+
+    private DateTime _startTime = DateTime.Now;
+
+    private async Task SendHeartbeatAsync()
+    {
+        try
+        {
+            using var process = System.Diagnostics.Process.GetCurrentProcess();
+
+            // Calculamos el UpTime
+            var upTime = (DateTime.Now - _startTime).TotalSeconds;
+
+            // Captura de métricas de memoria
+            long memoryMB = process.WorkingSet64 / (1024 * 1024);
+
+            // Captura de CPU (Aproximación por tiempo de procesador)
+            // Nota: En Windows, esto mide el tiempo total de CPU usado por el proceso
+            var cpuUsage = Math.Round(process.TotalProcessorTime.TotalMilliseconds / (DateTime.Now - _startTime).TotalMilliseconds * 100, 2);
+
+            var heartbeat = new HeartbeatDto(
+                ServiceName: "Device Activity Monitor (DAM)",
+                MachineName: Environment.MachineName,
+                Status: "Running", //Se debe modificar, este dato no puede ser fijo!!!
+                ActiveWatchers: _activeWatchers.Count,
+                CpuUsagePercentage: cpuUsage,
+                MemoryUsageMB: memoryMB,
+                UpTimeSeconds: (long)upTime,
+                Version: System.Reflection.Assembly.GetExecutingAssembly().GetName().Version?.ToString() ?? "1.0.0",
+                Timestamp: DateTime.Now
+            );
+
+            // Enviamos a través del servicio resiliente
+            await _devicePersistenceService.SendHeartbeatAsync(heartbeat);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning("Error al recolectar métricas de salud: {Message}", ex.Message);
+        }
     }
 
     // --- Manejo de Eventos ---

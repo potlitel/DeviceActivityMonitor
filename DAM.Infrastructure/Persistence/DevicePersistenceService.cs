@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Constants;
+using DAM.Core.DTOs.Heartbeat;
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -158,6 +159,22 @@ namespace DAM.Infrastructure.Persistence
             catch (Exception ex)
             {
                 throw;
+            }
+        }
+
+        public async Task SendHeartbeatAsync(HeartbeatDto heartbeat)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+            try
+            {
+                await storageService.SendHeartbeatAsync(heartbeat);
+                _logger.LogInformation(Messages.HeartBeat.HeartBeatSendSuccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.HeartBeat.HeartBeatSendError);
             }
         }
     }
