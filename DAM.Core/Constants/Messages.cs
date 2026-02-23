@@ -37,6 +37,12 @@
             public const string InvoiceFailed = "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.";
         }
 
+        public static class HeartBeat
+        {
+            public const string HeartBeatSendSuccess = "Información de servicio enviada correctamente";
+            public const string HeartBeatSendError = "No se pudo enviar Información de servicio";
+        }
+
         public static class Invoice
         {
             public const string DescriptionFormat = "Factura por {0} archivo(s) neto(s) (Copiados: {1} - Eliminados: {2}). Costo: {3:C} c/u.";

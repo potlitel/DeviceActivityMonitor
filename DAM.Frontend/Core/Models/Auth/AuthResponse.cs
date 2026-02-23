@@ -10,8 +10,8 @@ namespace DAM.Frontend.Core.Models.Auth
 
     public class AuthResponse
     {
-        public string Token { get; set; }
-        public string UserEmail { get; set; }
+        public string Token { get; set; } = string.Empty;
+        public string UserEmail { get; set; } = string.Empty;
         public DateTime ExpiresAt { get; set; }
         // RefreshToken no viene, así que puede ser opcional
         public string? RefreshToken { get; set; }
