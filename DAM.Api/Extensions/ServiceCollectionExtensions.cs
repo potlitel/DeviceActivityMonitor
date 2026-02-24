@@ -180,6 +180,7 @@ public static class ServiceCollectionExtensions
         services.AddSingleton<ICacheService, MemoryCacheService>();
         services.AddScoped<IInvoiceCalculator, FixedPriceInvoiceCalculator>();
         services.AddScoped<IAuditService, AuditService>();
+        services.AddScoped<IDevicePersistenceService, DevicePersistenceService>();
 
         return services;
     }
