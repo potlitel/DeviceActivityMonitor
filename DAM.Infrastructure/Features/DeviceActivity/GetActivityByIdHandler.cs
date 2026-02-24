@@ -2,6 +2,8 @@
 using DAM.Core.DTOs.DeviceActivity;
 using DAM.Core.Features.Activities.Queries;
 using DAM.Core.Interfaces;
+using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Features.DeviceActivity
 {
@@ -19,7 +21,7 @@ namespace DAM.Infrastructure.Features.DeviceActivity
     /// </para>
     /// </remarks>
     /// <param name="repository">Repositorio de actividades.</param>
-    public class GetActivityByIdHandler(IActivityRepository repository)
+    public class GetActivityByIdHandler(IActivityRepository repository, ILogger<GetActivityByIdHandler> logger)
         : IQueryHandler<GetActivityByIdQuery, DeviceActivityDto?>
     {
         /// <inheritdoc/>
@@ -27,21 +29,33 @@ namespace DAM.Infrastructure.Features.DeviceActivity
             GetActivityByIdQuery query,
             CancellationToken cancellationToken)
         {
-            var entity = await repository.GetByIdAsync(query.Id, cancellationToken);
+            try
+            {
+                logger.LogDebug("Obteniendo actividad por ID: {ActivityId}", query.Id);
 
-            if (entity == null)
-                return null;
+                // 🎯 Usamos el método genérico con includes para cargar relaciones
+                var entity = await repository.GetByIdAsync(
+                    query.Id,
+                    cancellationToken,
+                    // Includes para cargar colecciones relacionadas
+                    q => q.Include(a => a.PresenceHistory),
+                    q => q.Include(a => a.Invoices)
+                );
 
-            return new DeviceActivityDto(
-                entity.Id,
-                entity.SerialNumber,
-                entity.Model,
-                entity.TotalCapacityMB,
-                entity.InsertedAt,
-                entity.ExtractedAt,
-                entity.InitialAvailableMB,
-                entity.FinalAvailableMB
-            );
+                if (entity == null)
+                {
+                    logger.LogWarning("No se encontró actividad con ID: {ActivityId}", query.Id);
+                    return null;
+                }
+
+                // Mapeamos la entidad a DTO usando FromEntity
+                return DeviceActivityDto.FromEntity(entity);
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error al obtener actividad por ID: {ActivityId}", query.Id);
+                throw;
+            }
         }
     }
 }

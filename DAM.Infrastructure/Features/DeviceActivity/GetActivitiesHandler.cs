@@ -2,9 +2,10 @@
 using DAM.Core.Common;
 using DAM.Core.DTOs.DeviceActivity;
 using DAM.Core.Features.Activities.Queries;
+using DAM.Core.FilterExtensions;
 using DAM.Core.Interfaces;
 using DAM.Infrastructure.Extensions;
-using DAM.Core.FilterExtensions;
+using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Features.DeviceActivity
 {
@@ -27,7 +28,7 @@ namespace DAM.Infrastructure.Features.DeviceActivity
     /// </para>
     /// </remarks>
     /// <param name="repository">Repositorio de actividades inyectado por DI.</param>
-    public class GetActivitiesHandler(IActivityRepository repository)
+    public class GetActivitiesHandler(IActivityRepository repository, ILogger<GetActivitiesHandler> logger)
     : IQueryHandler<GetActivitiesQuery, PaginatedList<DeviceActivityDto>>
     {
         /// <inheritdoc/>
@@ -35,24 +36,32 @@ namespace DAM.Infrastructure.Features.DeviceActivity
             GetActivitiesQuery query,
             CancellationToken cancellationToken)
         {
-            return await repository.GetAllQueryable()
-                .ApplyActivityFilters(query.Filter)
-                .OrderByDescending(x => x.InsertedAt)
-                .ToPaginatedListAsync(
+            try
+            {
+                logger.LogDebug("Obteniendo actividades con filtros: {@Filters}", query.Filter);
+
+                // 1. Aplicamos filtros y ordenamiento.
+                var filteredQuery = repository.GetAllQueryable()
+                    .ApplyActivityFilters(query.Filter)
+                    .OrderByDescending(x => x.InsertedAt);
+
+                // 2. Proyectamos a DTO
+                var projectedQuery = filteredQuery.ToListDto();
+
+                // 3. Usamos ToPaginatedListAsync con una función identidad
+                //    porque projectedQuery ya es IQueryable<DeviceActivityDto>
+                return await projectedQuery.ToPaginatedListAsync(
                     query.Filter.PageNumber,
                     query.Filter.PageSize,
-                    entity => new DeviceActivityDto(
-                        entity.Id,
-                        entity.SerialNumber,
-                        entity.Model,
-                        entity.TotalCapacityMB,
-                        entity.InsertedAt,
-                        entity.ExtractedAt,
-                        entity.InitialAvailableMB,
-                        entity.FinalAvailableMB
-                    ),
+                    dto => dto,
                     cancellationToken
                 );
+            }
+            catch (Exception ex)
+            {
+                logger.LogError(ex, "Error al obtener actividades");
+                throw;
+            }
         }
     }
 }
