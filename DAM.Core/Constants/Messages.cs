@@ -31,6 +31,7 @@
             public const string PresenceFailed = "FALLO: No se pudo registrar la presencia del dispositivo {SN} al conectar.";
             public const string ActivitySaved = "Actividad del dispositivo {SN} persistida exitosamente.";
             public const string ActivityCritical = "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.";
+            public const string ActivityNotFound = "No se encontró la actividad con el id suministrado.";
             public const string EventSaved = "Evento de servicio '{EventType}' persistido correctamente.";
             public const string EventFailed = "FALLO al persistir el evento de servicio '{EventType}'.";
             public const string InvoiceSaved = "Factura de {Monto:C} calculada y persistida para {SN}.";
