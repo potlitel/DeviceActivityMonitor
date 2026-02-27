@@ -454,9 +454,59 @@ public static class ServiceCollectionExtensions
     public static IServiceCollection AddHealthChecksWithChecks(this IServiceCollection services)
     {
         services.AddHealthChecks()
-            .AddCheck<StorageHealthCheck>("💾 Almacenamiento")
-            .AddDbContextCheck<DeviceActivityDbContext>("🗄️ Base de Datos");
-            //.AddProcessAllocatedMemoryCheck(maximumMegabytesAllocated: 512, name: "🧠 Memoria RAM");
+        // Checks básicos existentes
+        .AddCheck<StorageHealthCheck>("💾 Almacenamiento")
+        .AddDbContextCheck<DeviceActivityDbContext>("🗄️ Base de Datos")
+
+        // ✅ NUEVOS: Checks del proceso
+        .AddProcessAllocatedMemoryCheck(
+            maximumMegabytesAllocated: 512,
+            name: "🧠 Memoria RAM del Proceso",
+            tags: new[] { "memory", "process", "critical" })
+
+        .AddProcessCpuCheck(
+            maximumCpuPercentage: 80,
+            sampleWindow: TimeSpan.FromSeconds(5),
+            name: "⚡ CPU del Proceso",
+            tags: new[] { "cpu", "process", "performance" })
+
+        // ✅ NUEVOS: Checks de red
+        .AddTcpPortHealthCheck(
+            host: "localhost",
+            port: 1433, // Puerto SQL Server
+            name: "🔌 Puerto SQL Server",
+            tags: new[] { "network", "database", "sql" })
+
+        .AddNetworkLatencyCheck(
+            host: "8.8.8.8", // Google DNS
+            timeoutMilliseconds: 5000,
+            name: "📡 Latencia a Internet",
+            tags: new[] { "network", "internet", "latency" })
+
+        // ✅ NUEVOS: Checks de seguridad
+        .AddSslCertificateCheck(
+            uri: "https://tusitio.com",
+            daysUntilExpiry: 30,
+            name: "🔐 Certificado SSL",
+            tags: new[] { "security", "ssl", "certificate" })
+
+        // ✅ NUEVOS: Checks de archivos
+        .AddCriticalFileCheck(
+            filePath: "appsettings.json",
+            minimumSizeBytes: 100,
+            name: "📄 Configuración",
+            tags: new[] { "file", "config", "critical" })
+
+        // ✅ NUEVOS: Checks de hardware
+        .AddSystemTemperatureCheck(
+            maximumTemperatureCelsius: 80.0,
+            name: "🌡️ Temperatura Sistema",
+            tags: new[] { "hardware", "temperature", "system" });
+
+        // ✅ NUEVOS: Checks específicos del dominio (implementa esto según tu negocio)
+        //.AddCheck<ExternalDevicesHealthCheck>(
+        //    "📱 Dispositivos Externos",
+        //    tags: new[] { "domain", "devices", "business" });
 
         return services;
     }

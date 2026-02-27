@@ -7,6 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Persistence
 {
+    /// <summary>
+    /// Orquestador de persistencia para actividades de dispositivos. 
+    /// Utiliza <see cref="IServiceScopeFactory"/> para gestionar ciclos de vida cortos de DbContext 
+    /// dentro de servicios de larga duración (BackgroundServices), evitando problemas de rastreo de entidades.
+    /// </summary>
     public class DevicePersistenceService : IDevicePersistenceService
     {
         private readonly IServiceScopeFactory _scopeFactory;
