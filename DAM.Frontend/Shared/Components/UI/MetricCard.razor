@@ -1,5 +1,43 @@
-﻿<h3>MetricCard</h3>
+﻿@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/UI/MetricCard.razor *@
+
+<MudPaper Elevation="1" Class="@($"pa-4 {Class}")" Style="@Style">
+    <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+        <MudStack>
+            <MudText Typo="Typo.body2" Class="grey--text">
+                <MudIcon Icon="@Icon" Size="Size.Small" Class="mr-1" />
+                @Title
+            </MudText>
+            <MudText Typo="@ValueTypo" Class="font-weight-bold">
+                @Value
+            </MudText>
+            @if (!string.IsNullOrEmpty(SubValue))
+            {
+                <MudText Typo="Typo.caption" Class="grey--text">
+                    @SubValue
+                </MudText>
+            }
+        </MudStack>
+        
+        @if (!string.IsNullOrEmpty(Trend))
+        {
+            <MudChip T="string"
+                     Size="Size.Small" 
+                     Color="@(Trend.StartsWith('+') ? Color.Success : Color.Error)"
+                     Variant="Variant.Outlined">
+                @Trend
+            </MudChip>
+        }
+    </MudStack>
+</MudPaper>
 
 @code {
-
+    [Parameter] public string Title { get; set; } = "";
+    [Parameter] public string Value { get; set; } = "";
+    [Parameter] public string? SubValue { get; set; }
+    [Parameter] public string? Icon { get; set; }
+    [Parameter] public string? Trend { get; set; }
+    [Parameter] public Typo ValueTypo { get; set; } = Typo.h5;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
 }

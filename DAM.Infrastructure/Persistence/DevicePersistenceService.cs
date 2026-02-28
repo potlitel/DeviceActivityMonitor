@@ -1,4 +1,5 @@
 ﻿using DAM.Core.Constants;
+using DAM.Core.DTOs.Heartbeat;
 using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using Microsoft.Extensions.DependencyInjection;
@@ -6,6 +7,11 @@ using Microsoft.Extensions.Logging;
 
 namespace DAM.Infrastructure.Persistence
 {
+    /// <summary>
+    /// Orquestador de persistencia para actividades de dispositivos. 
+    /// Utiliza <see cref="IServiceScopeFactory"/> para gestionar ciclos de vida cortos de DbContext 
+    /// dentro de servicios de larga duración (BackgroundServices), evitando problemas de rastreo de entidades.
+    /// </summary>
     public class DevicePersistenceService : IDevicePersistenceService
     {
         private readonly IServiceScopeFactory _scopeFactory;
@@ -158,6 +164,22 @@ namespace DAM.Infrastructure.Persistence
             catch (Exception ex)
             {
                 throw;
+            }
+        }
+
+        public async Task SendHeartbeatAsync(HeartbeatDto heartbeat)
+        {
+            using var scope = _scopeFactory.CreateScope();
+            var storageService = scope.ServiceProvider.GetRequiredService<IActivityStorageService>();
+
+            try
+            {
+                await storageService.SendHeartbeatAsync(heartbeat);
+                _logger.LogInformation(Messages.HeartBeat.HeartBeatSendSuccess);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, Messages.HeartBeat.HeartBeatSendError);
             }
         }
     }

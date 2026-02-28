@@ -1,0 +1,186 @@
+﻿@* 📁 DAM.Frontend/Features/Presence/Pages/PresenceDetail.razor *@
+@page "/presence/{id:int}"
+@attribute [Authorize]
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Presence
+@using DAM.Frontend.Core.Models.Activities
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+
+<PageTitle>Detalle de Presencia #@Id - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.OnlinePrediction" Class="mr-2" Color="Color.Primary" />
+    👤 Detalle de Evento de Presencia #@Id
+</MudText>
+
+@if (_isLoading)
+{
+    <LoadingState Message="Cargando detalles del evento..." />
+}
+else if (_presence == null)
+{
+    <DAM.Frontend.Shared.Components.UI.ErrorBoundary HasError="true"
+                                                     Message="No se encontró el evento de presencia solicitado."
+                   OnRetry="@(() => Navigation.NavigateTo("/presence"))" />
+}
+else
+{
+    <MudGrid>
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="1">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" Color="Color.Primary" />
+                            ℹ️ Información General
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudGrid>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Class="grey--text">ID del Evento</MudText>
+                            <MudText Typo="Typo.body1" Class="font-weight-bold">@_presence.Id</MudText>
+                        </MudItem>
+                        <MudItem xs="6">
+                            <MudText Typo="Typo.body2" Class="grey--text">Número de Serie</MudText>
+                            <MudText Typo="Typo.body1">@_presence.SerialNumber</MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.body2" Class="grey--text">Fecha y Hora</MudText>
+                            <MudText Typo="Typo.body1">
+                                @_presence.Timestamp.ToString("dddd, dd MMMM yyyy HH:mm:ss")
+                            </MudText>
+                        </MudItem>
+                        <MudItem xs="12">
+                            <MudText Typo="Typo.body2" Class="grey--text">Actividad Asociada</MudText>
+                            @if (_presence.ActivityId.HasValue)
+                            {
+                                <MudChip T="int"
+                                         Size="Size.Small" 
+                                         Color="Color.Primary"
+                                         OnClick="@(() => Navigation.NavigateTo($"/activities/{_presence.ActivityId}"))">
+                                         Ver Actividad #@_presence.ActivityId
+                                </MudChip>
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body1">Sin actividad asociada</MudText>
+                            }
+                        </MudItem>
+                    </MudGrid>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12" md="6">
+            <MudCard Elevation="1">
+                <MudCardHeader>
+                    <CardHeaderContent>
+                        <MudText Typo="Typo.h6">
+                            <MudIcon Icon="@Icons.Material.Filled.Analytics" Class="mr-2" Color="Color.Primary" />
+                            📊 Métricas del Evento
+                        </MudText>
+                    </CardHeaderContent>
+                </MudCardHeader>
+                <MudCardContent>
+                    <MudStack>
+                        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudText>Hace</MudText>
+                                <MudText Class="font-weight-bold">
+                                    @GetTimeAgo(_presence.Timestamp)
+                                </MudText>
+                            </MudStack>
+                        </MudPaper>
+
+                        <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                <MudText>Estado</MudText>
+                                <StatusBadge Status="Info" Text="✅ Procesado" />
+                            </MudStack>
+                        </MudPaper>
+
+                        @if (_presence.ActivityId.HasValue)
+                        {
+                            <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                                <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                                    <MudText>Actividad Relacionada</MudText>
+                                    <MudText Class="font-weight-bold">#@_presence.ActivityId</MudText>
+                                </MudStack>
+                            </MudPaper>
+                        }
+                    </MudStack>
+                </MudCardContent>
+            </MudCard>
+        </MudItem>
+
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-4 mt-4">
+                <MudStack Row="true" Justify="Justify.FlexEnd">
+                    <MudButton Variant="Variant.Outlined" 
+                              Color="Color.Default"
+                              OnClick="@(() => Navigation.NavigateTo("/presence"))">
+                        <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+                        Volver al Listado
+                    </MudButton>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
+
+@code {
+    [Parameter] public int Id { get; set; }
+
+    [Inject] private IApiClient ApiClient { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
+
+    private PresenceDto? _presence;
+    private bool _isLoading = true;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadPresence();
+    }
+
+    private async Task LoadPresence()
+    {
+        try
+        {
+            _isLoading = true;
+            _presence = await ApiClient.GetPresenceByIdAsync(Id);
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando presencia: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
+
+    private string GetTimeAgo(DateTime timestamp)
+    {
+        var diff = DateTime.UtcNow - timestamp;
+
+        if (diff.TotalMinutes < 1)
+            return "hace unos segundos";
+        if (diff.TotalHours < 1)
+            return $"hace {diff.Minutes} minutos";
+        if (diff.TotalDays < 1)
+            return $"hace {diff.Hours} horas";
+        if (diff.TotalDays < 30)
+            return $"hace {diff.Days} días";
+        if (diff.TotalDays < 365)
+            return $"hace {Math.Floor(diff.TotalDays / 30)} meses";
+
+        return $"hace {Math.Floor(diff.TotalDays / 365)} años";
+    }
+}

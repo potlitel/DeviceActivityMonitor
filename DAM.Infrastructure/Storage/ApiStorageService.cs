@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.DTOs.Heartbeat;
+using DAM.Core.Entities;
 using DAM.Core.Interfaces;
 using Microsoft.Extensions.Logging;
 using System.Net.Http.Json;
@@ -71,6 +72,20 @@ namespace DAM.Infrastructure.Storage
             // Endpoint POST para guardar eventos del servicio MODIFICAR!!!!
             var response = await _httpClient.PostAsJsonAsync("api/serviceevents", activity);
             response.EnsureSuccessStatusCode();
+        }
+
+        public async Task SendHeartbeatAsync(HeartbeatDto heartbeat)
+        {
+            try
+            {
+                var response = await _httpClient.PostAsJsonAsync("api/service/heartbeat", heartbeat);
+                response.EnsureSuccessStatusCode();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error crítico al enviar Heartbeat a la API remota.");
+                // Podríamos disparar el re-chequeo de disponibilidad aquí si fuera necesario
+            }
         }
     }
 }

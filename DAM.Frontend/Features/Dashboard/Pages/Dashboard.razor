@@ -1,5 +1,294 @@
-﻿<h3>Dashboard</h3>
+﻿@* 📁 DAM.Frontend/Features/Dashboard/Pages/Dashboard.razor *@
+@page "/"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Activities
+@using DAM.Frontend.Core.Models.Invoices
+@using DAM.Frontend.Core.Models.Presence
+@using DAM.Frontend.Core.Models.System
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@attribute [Authorize]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<PageTitle>Dashboard - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Dashboard" Class="mr-2" Color="Color.Primary" />
+    📊 Dashboard - Resumen General
+</MudText>
+
+@if (_isLoading)
+{
+    <LoadingState Message="Cargando dashboard..." />
+}
+else if (_hasError)
+{
+    <ErrorBoundary HasError="true" 
+                   Message="No se pudieron cargar los datos del dashboard."
+                   OnRetry="@LoadDashboardData" />
+}
+else
+{
+    <MudGrid>
+        <!-- 📱 Tarjetas de métricas -->
+        <MudItem xs="12" sm="6" md="3">
+            <MetricCard Title="Actividades"
+                       Value="@_activityCount.ToString("N0")"
+                       Icon="@Icons.Material.Filled.Usb"
+                       Trend="@_activityTrend" />
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MetricCard Title="Eventos de Presencia"
+                       Value="@_presenceCount.ToString("N0")"
+                       Icon="@Icons.Material.Filled.OnlinePrediction"
+                       SubValue="últimas 24h" />
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MetricCard Title="Facturas"
+                       Value="@_invoiceCount.ToString("N0")"
+                       Icon="@Icons.Material.Filled.RequestQuote"
+                       ValueTypo="Typo.h5" />
+        </MudItem>
+        
+        <MudItem xs="12" sm="6" md="3">
+            <MetricCard Title="Eventos Críticos"
+                       Value="@_criticalEvents.ToString("N0")"
+                       Icon="@Icons.Material.Filled.Warning"
+                       Trend="@_criticalTrend"
+                       ValueTypo="Typo.h5" />
+        </MudItem>
+
+        <!-- 📋 Últimas actividades -->
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mb-4">
+                    <MudText Typo="Typo.h6">
+                        <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" Color="Color.Primary" />
+                        📋 Últimas Actividades
+                    </MudText>
+                    
+                    <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                                  OnClick="@LoadDashboardData"
+                                  Size="Size.Small"
+                                  Variant="Variant.Outlined" />
+                </MudStack>
+
+                <DataGrid TItem="ActivityDto"
+                         Items="@_recentActivities"
+                         Loading="@_isLoading"
+                         ShowSearch="false"
+                         EmptyText="No hay actividades registradas">
+                    
+                    <HeaderTemplate>
+                        <MudTh>#</MudTh>
+                        <MudTh>📱 Serial</MudTh>
+                        <MudTh>💾 Modelo</MudTh>
+                        <MudTh>⏰ Inicio</MudTh>
+                        <MudTh>⏱️ Duración</MudTh>
+                        <MudTh>📊 Estado</MudTh>
+                    </HeaderTemplate>
+                    
+                    <RowTemplate>
+                        <MudTd DataLabel="#">@context.Id</MudTd>
+                        <MudTd DataLabel="Serial">
+                            <MudText Class="font-weight-medium">@context.SerialNumber</MudText>
+                        </MudTd>
+                        <MudTd DataLabel="Modelo">@context.Model</MudTd>
+                        <MudTd DataLabel="Inicio">
+                            @context.InsertedAt?.ToString("dd/MM/yyyy HH:mm")
+                        </MudTd>
+                        <MudTd DataLabel="Duración">
+                            @if (context.Duration.HasValue)
+                            {
+                                @(context.Duration.Value.ToString(@"hh\:mm\:ss"))
+                            }
+                            else
+                            {
+                                <MudText Typo="Typo.body2" Class="grey--text">-</MudText>
+                            }
+                        </MudTd>
+                        <MudTd DataLabel="Estado">
+                            <StatusBadge Status="@(context.IsActive ? "Activo" : "Finalizado")"
+                                        Text="@(context.IsActive ? "🟢 Activo" : "⚪ Finalizado")" />
+                        </MudTd>
+                    </RowTemplate>
+                </DataGrid>
+            </MudPaper>
+        </MudItem>
+
+        <!-- 📊 Estado del sistema -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Monitor" Class="mr-2" Color="Color.Primary" />
+                    📊 Estado del Sistema
+                </MudText>
+                
+                <MudStack>
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Storage" Color="Color.Primary" Size="Size.Small" />
+                                <MudText>Espacio en Disco</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@_diskSpace</MudText>
+                        </MudStack>
+                        <MudProgressLinear Color="Color.Primary" 
+                                          Size="Size.Small" 
+                                          Value="@_diskPercentage" 
+                                          Class="mt-2" />
+                        <MudText Typo="Typo.caption" Class="grey--text mt-1">
+                            @_diskFree GB libres de @_diskTotal GB
+                        </MudText>
+                    </MudPaper>
+                    
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Computer" Color="Color.Success" Size="Size.Small" />
+                                <MudText>Servicio Windows</MudText>
+                            </MudStack>
+                            <StatusBadge Status="success" Text="✅ Activo" />
+                        </MudStack>
+                    </MudPaper>
+                    
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.DataExploration" Color="Color.Success" Size="Size.Small" />
+                                <MudText>Base de Datos</MudText>
+                            </MudStack>
+                            <StatusBadge Status="success" Text="✅ Conectada" />
+                        </MudStack>
+                    </MudPaper>
+                    
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack Row="true" AlignItems="AlignItems.Center">
+                                <MudIcon Icon="@Icons.Material.Filled.Speed" Color="Color.Info" Size="Size.Small" />
+                                <MudText>Rendimiento</MudText>
+                            </MudStack>
+                            <MudText Typo="Typo.body2" Class="font-weight-bold">@_responseTime ms</MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- ⚠️ Últimos eventos del sistema -->
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-6 mt-4">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" Color="Color.Warning" />
+                    ⚠️ Últimos Eventos del Sistema
+                </MudText>
+                
+                <MudTable Items="@_recentEvents" Hover="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>⏰ Hora</MudTh>
+                        <MudTh>📌 Nivel</MudTh>
+                        <MudTh>🔧 Origen</MudTh>
+                        <MudTh>📝 Mensaje</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="Hora">
+                            @context.Timestamp.ToString("HH:mm:ss")
+                        </MudTd>
+                        <MudTd DataLabel="Nivel">
+                            <MudChip T="ServiceEventFilter"
+                                     Size="Size.Small" 
+                                     Color="@(context.LevelColor switch {
+                                        "error" => Color.Error,
+                                        "warning" => Color.Warning,
+                                        "info" => Color.Info,
+                                        _ => Color.Default
+                                    })">
+                                <MudIcon Icon="@context.LevelIcon" Size="Size.Small" Class="mr-1" />
+                                @context.Level
+                            </MudChip>
+                        </MudTd>
+                        <MudTd DataLabel="Origen">@context.Source</MudTd>
+                        <MudTd DataLabel="Mensaje">@context.Message</MudTd>
+                    </RowTemplate>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
+    private bool _isLoading = true;
+    private bool _hasError = false;
+    
+    // Métricas
+    private int _activityCount;
+    private int _presenceCount;
+    private int _invoiceCount;
+    private int _criticalEvents;
+    private string _activityTrend = "▲ 12%";
+    private string _criticalTrend = "▼ 5%";
+    
+    // Sistema
+    private string _diskSpace = "12.5 GB libres";
+    private string _diskFree = "12.5";
+    private string _diskTotal = "128";
+    private double _diskPercentage = 65;
+    private int _responseTime = 245;
+    
+    // Datos
+    private List<ActivityDto> _recentActivities = new();
+    private List<ServiceEventDto> _recentEvents = new();
 
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadDashboardData();
+    }
+
+    private async Task LoadDashboardData()
+    {
+        try
+        {
+            _isLoading = true;
+            _hasError = false;
+            StateHasChanged();
+
+            // Cargar datos en paralelo
+            var activitiesTask = ApiClient.GetActivitiesAsync(new ActivityFilter(null, null, 1, 5));
+            var presenceTask = ApiClient.GetPresenceAsync(new PresenceFilter(null, 1, 1));
+            var invoicesTask = ApiClient.GetInvoicesAsync(new InvoiceFilter(null, 1, 1));
+            var eventsTask = ApiClient.GetServiceEventsAsync(new ServiceEventFilter(null, null, 1, 5));
+            var criticalTask = ApiClient.GetServiceEventsAsync(new ServiceEventFilter(null, null, 1, 1));
+
+            await Task.WhenAll(activitiesTask, presenceTask, invoicesTask, eventsTask, criticalTask);
+
+            var activities = await activitiesTask;
+            var presence = await presenceTask;
+            var invoices = await invoicesTask;
+            var events = await eventsTask;
+            var critical = await criticalTask;
+
+            _recentActivities = activities?.Items ?? new();
+            _activityCount = activities?.TotalCount ?? 0;
+            
+            _presenceCount = presence?.TotalCount ?? 0;
+            _invoiceCount = invoices?.TotalCount ?? 0;
+            
+            _recentEvents = events?.Items ?? new();
+            _criticalEvents = critical?.TotalCount ?? 0;
+
+            _isLoading = false;
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            _isLoading = false;
+            _hasError = true;
+            Snackbar.Add($"❌ Error cargando dashboard: {ex.Message}", Severity.Error);
+            StateHasChanged();
+        }
+    }
 }

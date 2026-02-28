@@ -1,17 +1,18 @@
 ﻿using DAM.Api.Base;
-using DAM.Core.Abstractions;
+using DAM.Core.Constants;
 using DAM.Core.DTOs.Invoices;
+using DAM.Core.Features.Activities.Queries;
 using DAM.Core.Features.Invoices.Commands;
+using DAM.Core.Interfaces;
 using DAM.Infrastructure.CQRS;
-using FastEndpoints;
 
 namespace DAM.Api.Features.Invoices;
 
-public class CalculateInvoiceRequest
-{
-    public Guid ActivityId { get; set; }
-    public bool FinalizeActivity { get; set; } = true;
-}
+//public class CalculateInvoiceRequest
+//{
+//    public int ActivityId { get; set; }
+//    public bool FinalizeActivity { get; set; } = true;
+//}
 
 /// <summary>
 /// 💰 Calcula y persiste una factura para una actividad específica de dispositivo.
@@ -45,8 +46,8 @@ public class CalculateInvoiceRequest
 /// asociada se marca automáticamente como 'Completed' y no podrá ser facturada nuevamente.
 /// </para>
 /// </remarks>
-public class CalculateInvoiceEndpoint(IDispatcher dispatcher)
-    : BaseEndpoint<CalculateInvoiceRequest, InvoiceResponse>
+public class CalculateInvoiceEndpoint(IDispatcher dispatcher, IDevicePersistenceService persistence)
+    : BaseEndpoint<CalculateInvoiceCommand, InvoiceResponse>
 {
     public override void Configure()
     {
@@ -71,11 +72,54 @@ public class CalculateInvoiceEndpoint(IDispatcher dispatcher)
         });
     }
 
-    public override async Task HandleAsync(CalculateInvoiceRequest req, CancellationToken ct)
+    public override async Task HandleAsync(CalculateInvoiceCommand req, CancellationToken ct)
     {
-        var command = new CalculateInvoiceCommand(req.ActivityId, req.FinalizeActivity);
-        var result = await dispatcher.SendAsync(command, ct);
+        //var command = new CalculateInvoiceCommand(req.ActivityId, req.FinalizeActivity);
+        //var result = await dispatcher.SendAsync(command, ct);
 
-        await SendSuccessAsync(result, "✅ Factura procesada y guardada correctamente.", ct);
+        //await SendSuccessAsync(result, "✅ Factura procesada y guardada correctamente.", ct);
+
+        // 1. Obtener actividad
+        var activity = await dispatcher.QueryAsync(new GetActivityByIdQuery(req.DeviceActivityId), ct);
+
+        if (activity == null)
+        {
+            AddError(Messages.Persistence.ActivityNotFound); // Usando tus constantes
+            await SendErrorsAsync(404, ct);
+            return;
+        }
+
+        // 2. Calcular usando la lógica que me suministraste (survivingFiles)
+        var invoice = persistence.PersistInvoiceAsync(activity.ToEntity(), true);
+
+        if (invoice == null)
+        {
+            // Escenario negativo: No hay archivos para cobrar
+            AddError("No hay archivos netos para facturar en esta actividad.");
+            await SendErrorsAsync(400, ct);
+            return;
+        }
+
+        //try
+        //{
+        //    // 3. Intentar persistir (Comando que implementa la lógica de PersistInvoiceAsync)
+        //    await dispatcher.SendAsync(new CreateInvoiceCommand(invoice), ct);
+
+        //    // 4. Éxito: Mapeamos a DTO (Punto 6)
+        //    var dto = new InvoiceDto(
+        //        invoice.Id,
+        //        invoice.SerialNumber,
+        //        invoice.TotalAmount,
+        //        invoice.Description,
+        //        invoice.Timestamp
+        //    );
+
+        //    await SendSuccessAsync(dto, "Factura generada y persistida.", ct);
+        //}
+        //catch (Exception)
+        //{
+        //    AddError("Error crítico al persistir la factura calculada.");
+        //    await SendErrorsAsync(500, ct);
+        //}
     }
 }

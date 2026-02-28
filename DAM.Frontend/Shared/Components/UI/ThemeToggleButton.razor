@@ -1,0 +1,59 @@
+﻿@using DAM.Frontend.Core.Interfaces
+@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/UI/ThemeToggleButton.razor *@
+@inject IThemeService ThemeService
+@inject ISnackbar Snackbar
+
+<MudIconButton 
+    Icon="@_currentEmoji"
+    Size="@Size.Medium"
+    Variant="@Variant.Text"
+    Color="@Color.Inherit"
+    OnClick="@OnToggleTheme"
+    Style="@_buttonStyle"
+    Title="@_tooltip" />
+
+@code {
+    private string _currentEmoji = "🌙";
+    private string _tooltip = "Cambiar tema";
+    private string _buttonStyle = "font-size: 24px; transition: all 0.3s ease;";
+
+    protected override async Task OnInitializedAsync()
+    {
+        ThemeService.ThemeChanged += OnThemeChanged;
+        await UpdateStateAsync();
+    }
+
+    private async void OnThemeChanged(object? sender, bool isDark)
+    {
+        await UpdateStateAsync();
+        await InvokeAsync(StateHasChanged);
+    }
+
+    private async Task UpdateStateAsync()
+    {
+        _currentEmoji = ThemeService.GetSmartThemeEmoji();
+        _tooltip = ThemeService.GetThemeTooltip();
+        
+        _buttonStyle = "font-size: 28px; transition: all 0.3s ease;";
+        await Task.Delay(100);
+        _buttonStyle = "font-size: 24px; transition: all 0.3s ease;";
+    }
+
+    private async Task OnToggleTheme()
+    {
+        await ThemeService.ToggleThemeAsync();
+        
+        var themeName = ThemeService.IsDarkMode ? "🌙 Oscuro" : "☀️ Claro";
+        Snackbar.Add($"🎨 Tema cambiado a: {themeName}", Severity.Info, config =>
+        {
+            config.Icon = ThemeService.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode;
+            config.VisibleStateDuration = 1500;
+        });
+    }
+
+    public void Dispose()
+    {
+        ThemeService.ThemeChanged -= OnThemeChanged;
+    }
+}

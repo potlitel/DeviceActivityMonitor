@@ -1,5 +1,159 @@
-﻿<h3>MainLayout</h3>
+﻿@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.JSInterop
+@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/Layout/MainLayout.razor *@
+@inherits LayoutComponentBase
+@inject IThemeService ThemeService
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+@inject IJSRuntime JSRuntime
+
+@* 👈 SOLO ESTE LAYOUT DEBE TENER AUTHORIZE *@
+@attribute [Authorize]
+
+@* <MudThemeProvider Theme="@(ThemeService.IsDarkMode ? DamTheme.DarkTheme : DamTheme.LightTheme)" /> *@
+<MudThemeProvider />
+<MudPopoverProvider />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+<MudLayout>
+    <MudAppBar Elevation="1" Class="py-2">
+        <MudIconButton 
+            Icon="@Icons.Material.Filled.Menu" 
+            Color="Color.Inherit" 
+            OnClick="@((e) => _drawerOpen = !_drawerOpen)"
+            Class="mr-2" />
+        
+        <MudText Typo="Typo.h6" Class="font-weight-bold dam-logo">
+            <MudIcon Icon="@Icons.Material.Filled.Storage" Class="mr-1" Color="Color.Primary" />
+            DAM - Device Activity Monitor
+        </MudText>
+        
+        <MudSpacer />
+        
+        <!-- ⏰ RELOJ DINÁMICO CON EMOJI -->
+        <MudText Class="mr-4 grey--text" Typo="Typo.body2">
+            @DateTime.Now.ToString("dddd, dd MMMM yyyy - HH:mm:ss")
+        </MudText>
+        
+        <!-- 🎨 BOTÓN DE TEMA INTELIGENTE (sol/luna invertido) -->
+        <ThemeToggleButton />
+        
+        <AuthorizeView>
+            <Authorized>
+                <MudMenu Anchor="Origin.BottomRight" 
+                        TransformOrigin="Origin.TopRight" 
+                        Icon="@Icons.Material.Filled.AccountCircle"
+                        Size="Size.Large">
+                    
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/profile"))">
+                        <MudIcon Icon="@Icons.Material.Filled.Person" Size="Size.Small" Class="mr-2" />
+                        👤 Mi Perfil
+                    </MudMenuItem>
+                    
+                    <MudMenuItem OnClick="@(() => Navigation.NavigateTo("/2fa/setup"))">
+                        <MudIcon Icon="@Icons.Material.Filled.Lock" Size="Size.Small" Class="mr-2" />
+                        🔐 Configurar 2FA
+                    </MudMenuItem>
+                    
+                    <MudDivider Class="my-2" />
+                    
+                    <MudMenuItem OnClick="@LogoutAsync">
+                        <MudIcon Icon="@Icons.Material.Filled.ExitToApp" Size="Size.Small" Class="mr-2" />
+                        🚪 Cerrar Sesión
+                    </MudMenuItem>
+                </MudMenu>
+            </Authorized>
+        </AuthorizeView>
+    </MudAppBar>
+
+    <MudDrawer @bind-Open="@_drawerOpen" 
+               Variant="@DrawerVariant.Mini" 
+               ClipMode="DrawerClipMode.Always">
+        <NavMenu />
+        
+        <!-- 📊 ESTADO DEL TEMA EN DRAWER -->
+        <MudStack Class="mt-auto pa-4" Spacing="2">
+            <MudDivider />
+            <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.Center">
+                <MudIcon Icon="@(ThemeService.IsDarkMode ? Icons.Material.Filled.DarkMode : Icons.Material.Filled.LightMode)" 
+                        Size="Size.Small" 
+                        Color="Color.Primary" />
+                <MudText Typo="Typo.caption" Class="grey--text">
+                    @(ThemeService.IsDarkMode ? "🌙 Modo Oscuro" : "☀️ Modo Claro")
+                </MudText>
+            </MudStack>
+        </MudStack>
+    </MudDrawer>
+
+    <MudMainContent Class="py-6 px-8">
+        <CascadingValue Name="PageTitle" Value="@_pageTitle">
+            @Body
+        </CascadingValue>
+    </MudMainContent>
+
+    <!-- ✅ FOOTER CON MUDPAPER (reemplazo de MudFooter) -->
+    <MudPaper Class="text-center grey--text py-4"
+              Square="true"
+              Elevation="0"
+              Style="border-top: 1px solid rgba(224, 224, 224, 0.4);">
+        <MudContainer MaxWidth="MaxWidth.Large">
+            <MudText Typo="Typo.caption">
+                © @DateTime.Now.Year DAM - Device Activity Monitor. v1.0.0
+            </MudText>
+        </MudContainer>
+    </MudPaper>
+</MudLayout>
 
 @code {
-
+    private bool _drawerOpen = true;
+    private string _pageTitle = "Dashboard";
+    private Timer? _timer;
+    
+    // [Inject] private IMudDrawerService DrawerService { get; set; }
+    
+    protected override async Task OnInitializedAsync()
+    {
+        // Inicializar tema (detección de hora)
+        await ThemeService.InitializeThemeAsync();
+        
+        // Verificar autenticación
+        if (!await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/auth/login", true);
+        }
+        
+        // Reloj en tiempo real
+        _timer = new Timer(_ => 
+        {
+            InvokeAsync(StateHasChanged);
+        }, null, TimeSpan.Zero, TimeSpan.FromSeconds(1));
+    }
+    
+    private async Task LogoutAsync()
+    {
+        var confirmed = await DialogService.ShowMessageBox(
+            "Confirmar",
+            "¿Está seguro que desea cerrar sesión?",
+            yesText: "Sí, cerrar sesión",
+            cancelText: "Cancelar");
+        
+        if (confirmed == true)
+        {
+            await AuthService.LogoutAsync();
+            Snackbar.Add("✅ Sesión cerrada correctamente", Severity.Success);
+            Navigation.NavigateTo("/auth/login", true);
+        }
+    }
+    
+    public void Dispose()
+    {
+        _timer?.Dispose();
+    }
 }
