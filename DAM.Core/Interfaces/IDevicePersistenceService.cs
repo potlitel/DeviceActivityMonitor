@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.DTOs.Heartbeat;
+using DAM.Core.Entities;
 
 namespace DAM.Core.Interfaces
 {
@@ -56,5 +57,7 @@ namespace DAM.Core.Interfaces
         /// </summary>
         /// <returns>Una tarea que representa el proceso de recuperación.</returns>
         Task RecoverPendingActivitiesAsync();
+
+        Task SendHeartbeatAsync(HeartbeatDto heartbeat);
     }
 }

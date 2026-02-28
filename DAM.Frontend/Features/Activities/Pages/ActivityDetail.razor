@@ -1,5 +1,228 @@
-﻿<h3>ActivityDetail</h3>
+﻿@* 📁 DAM.Frontend/Features/Activities/Pages/ActivityDetail.razor *@
+@page "/activities/{id:int}"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Activities
+@using DAM.Frontend.Core.Models.Presence
+@using Microsoft.AspNetCore.Authorization
+@using MudBlazor
+@attribute [Authorize(Roles = "Manager")]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+@inject NavigationManager Navigation
+
+<PageTitle>Detalle de Actividad - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" Color="Color.Primary" />
+    📋 Detalle de Actividad #@Id
+</MudText>
+
+@if (_isLoading)
+{
+    <LoadingState Message="Cargando actividad..." />
+}
+else if (_activity == null)
+{
+    <ErrorBoundary HasError="true" 
+                   Title="Actividad no encontrada"
+                   Message="La actividad solicitada no existe o ha sido eliminada."
+                   OnRetry="@(() => Navigation.NavigateTo("/activities", true))" />
+}
+else
+{
+    <MudGrid>
+        <!-- Información principal -->
+        <MudItem xs="12" md="8">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" Color="Color.Primary" />
+                    ℹ️ Información General
+                </MudText>
+
+                <MudGrid>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Número de Serie</MudText>
+                        <MudText Typo="Typo.body1" Class="font-weight-bold">@_activity.SerialNumber</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Modelo</MudText>
+                        <MudText Typo="Typo.body1">@_activity.Model</MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Estado</MudText>
+                        <StatusBadge Status="@(_activity.IsActive ? "Activo" : "Finalizado")"
+                                    Text="@(_activity.IsActive ? "🟢 Activo" : "⚪ Finalizado")" />
+                    </MudItem>
+                </MudGrid>
+
+                <MudDivider Class="my-4" />
+
+                <MudGrid>
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Fecha de Inserción</MudText>
+                        <MudText Typo="Typo.body1">
+                            @_activity.InsertedAt?.ToString("dd/MM/yyyy HH:mm:ss")
+                        </MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Fecha de Extracción</MudText>
+                        <MudText Typo="Typo.body1">
+                            @_activity.ExtractedAt?.ToString("dd/MM/yyyy HH:mm:ss") ?? "Pendiente"
+                        </MudText>
+                    </MudItem>
+                    
+                    <MudItem xs="6" md="4">
+                        <MudText Typo="Typo.body2" Class="grey--text">Duración</MudText>
+                        <MudText Typo="Typo.body1">
+                            @if (_activity.Duration.HasValue)
+                            {
+                                @(_activity.Duration.Value.ToString(@"dd\.hh\:mm\:ss"))
+                            }
+                            else
+                            {
+                                <span class="grey--text">En curso</span>
+                            }
+                        </MudText>
+                    </MudItem>
+                </MudGrid>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Métricas de almacenamiento -->
+        <MudItem xs="12" md="4">
+            <MudPaper Elevation="1" Class="pa-6">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Storage" Class="mr-2" Color="Color.Primary" />
+                    💾 Métricas de Almacenamiento
+                </MudText>
+
+                <MudStack>
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText>Capacidad Total</MudText>
+                            <MudText Typo="Typo.h6">@(_activity.TotalCapacityMB / 1024) GB</MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText>Espacio Inicial</MudText>
+                            <MudText>@(_activity.InitialAvailableMB / 1024) GB</MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudText>Espacio Final</MudText>
+                            <MudText>@(_activity.FinalAvailableMB / 1024) GB</MudText>
+                        </MudStack>
+                    </MudPaper>
+
+                    <MudPaper Class="pa-4" Elevation="0" Outlined="true">
+                        <MudStack Row="true" AlignItems="AlignItems.Center" Justify="Justify.SpaceBetween">
+                            <MudStack>
+                                <MudText>GB Procesados</MudText>
+                                <MudProgressLinear Color="Color.Primary" 
+                                                  Size="Size.Small" 
+                                                  Value="@_usagePercentage" />
+                            </MudStack>
+                            <MudText Typo="Typo.h5" Color="Color.Primary">
+                                @_activity.GbProcessed.ToString("F2") GB
+                            </MudText>
+                        </MudStack>
+                    </MudPaper>
+                </MudStack>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Eventos de presencia asociados -->
+        <MudItem xs="12">
+            <MudPaper Elevation="1" Class="pa-6 mt-4">
+                <MudText Typo="Typo.h6" Class="mb-4">
+                    <MudIcon Icon="@Icons.Material.Filled.OnlinePrediction" Class="mr-2" Color="Color.Primary" />
+                    👤 Eventos de Presencia Asociados
+                </MudText>
+
+                <MudTable Items="@_presenceEvents" Hover="true" Striped="true">
+                    <HeaderContent>
+                        <MudTh>#</MudTh>
+                        <MudTh>⏰ Fecha y Hora</MudTh>
+                        <MudTh>📱 Serial</MudTh>
+                    </HeaderContent>
+                    <RowTemplate>
+                        <MudTd DataLabel="#">@context.Id</MudTd>
+                        <MudTd DataLabel="Fecha">
+                            @context.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+                        </MudTd>
+                        <MudTd DataLabel="Serial">@context.SerialNumber</MudTd>
+                    </RowTemplate>
+                    <NoRecordsContent>
+                        <MudText Align="Align.Center" Class="py-6 grey--text">
+                            No hay eventos de presencia asociados a esta actividad.
+                        </MudText>
+                    </NoRecordsContent>
+                </MudTable>
+            </MudPaper>
+        </MudItem>
+
+        <!-- Botones de acción -->
+        <MudItem xs="12" Class="mt-4">
+            <MudStack Row="true" Justify="Justify.FlexEnd">
+                <MudButton Variant="Variant.Outlined" 
+                          Color="Color.Default"
+                          OnClick="@(() => Navigation.NavigateTo("/activities"))">
+                    <MudIcon Icon="@Icons.Material.Filled.ArrowBack" Class="mr-2" />
+                    Volver al Listado
+                </MudButton>
+            </MudStack>
+        </MudItem>
+    </MudGrid>
+}
 
 @code {
+    [Parameter] public int Id { get; set; }
+    
+    private ActivityDto? _activity;
+    private List<PresenceDto> _presenceEvents = new();
+    private bool _isLoading = true;
+    private double _usagePercentage => 
+        _activity?.TotalCapacityMB > 0 
+            ? (double)(_activity.TotalCapacityMB - _activity.FinalAvailableMB) / _activity.TotalCapacityMB * 100 
+            : 0;
 
+    protected override async Task OnParametersSetAsync()
+    {
+        await LoadActivityData();
+    }
+
+    private async Task LoadActivityData()
+    {
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            _activity = await ApiClient.GetActivityByIdAsync(Id);
+            
+            if (_activity != null)
+            {
+                var presence = await ApiClient.GetPresenceAsync(
+                    new PresenceFilter(Guid.Empty, 1, 100)); // TODO: Filtrar por activityId real
+                
+                _presenceEvents = presence?.Items ?? new();
+            }
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando actividad: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }

@@ -1,5 +1,289 @@
-﻿<h3>Login</h3>
+﻿@* 📁 DAM.Frontend/Features/Auth/Pages/Login.razor *@
+@page "/auth/login"
+@layout AuthLayout
+@using DAM.Frontend.Core.Models.Auth
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Shared.Components.Layout
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Forms
+@using MudBlazor
+@using global::System.ComponentModel.DataAnnotations
+
+@attribute [AllowAnonymous]
+
+<MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+    <MudPaper Elevation="3" Class="pa-8">
+        <MudStack AlignItems="AlignItems.Center" Class="mb-6">
+            <MudAvatar Color="Color.Primary" Size="Size.Large" Variant="Variant.Filled">
+                <MudIcon Icon="@Icons.Material.Filled.Storage" Size="Size.Large" />
+            </MudAvatar>
+
+            <MudText Typo="Typo.h4" Align="Align.Center" Class="mt-4">
+                DAM - Device Activity Monitor
+            </MudText>
+
+            <MudText Typo="Typo.body2" Class="grey--text" Align="Align.Center">
+                Inicie sesión para acceder al panel de monitoreo
+            </MudText>
+        </MudStack>
+
+        <MudAlert Severity="Severity.Info" Class="mb-6" Variant="Variant.Text">
+            <MudStack Row="true" AlignItems="AlignItems.Center">
+                <MudIcon Icon="@Icons.Material.Filled.Info" Size="Size.Small" />
+                <MudText>Credenciales de prueba: admin@dam.com / Admin123!</MudText>
+            </MudStack>
+        </MudAlert>
+
+        @* ✅ FormName corregido para .NET 8 *@
+        <EditForm Model="@_loginModel"
+                  OnValidSubmit="@HandleLogin"
+                  FormName="loginForm">
+            <DataAnnotationsValidator />
+            <ValidationSummary class="text-error mb-4" />
+
+            <MudStack>
+                <MudTextField @bind-Value="@_loginModel.Email"
+                              For="@(() => _loginModel.Email)"
+                              Label="Correo electrónico"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Email"
+                              Required="true"
+                              Disabled="@_isLoading" />
+
+                <MudTextField @bind-Value="@_loginModel.Password"
+                              For="@(() => _loginModel.Password)"
+                              Label="Contraseña"
+                              Variant="Variant.Outlined"
+                              Adornment="Adornment.Start"
+                              AdornmentIcon="@Icons.Material.Filled.Lock"
+                              InputType="InputType.Password"
+                              Required="true"
+                              Disabled="@_isLoading" />
+
+                <MudStack Row="true" Justify="Justify.SpaceBetween" AlignItems="AlignItems.Center" Class="mt-2">
+                    <MudCheckBox T="bool" @bind-Checked="@_rememberMe" Color="Color.Primary" Disabled="@_isLoading">
+                        <MudText>Recordarme</MudText>
+                    </MudCheckBox>
+                    <MudLink Href="/auth/forgot-password" Typo="Typo.body2" Disabled="@_isLoading">¿Olvidó su contraseña?</MudLink>
+                </MudStack>
+
+                <MudButton ButtonType="ButtonType.Submit" Color="Color.Primary" Size="Size.Large" Variant="Variant.Filled" FullWidth="true" Class="mt-4" Disabled="@_isLoading">
+                    @if (_isLoading)
+                    {
+                        <MudProgressCircular Size="Size.Small" Class="mr-2" Indeterminate="true" />
+                        <span>Iniciando sesión...</span>
+                    }
+                    else
+                    {
+                        <MudIcon Icon="@Icons.Material.Filled.Login" Class="mr-2" />
+                        <span>Iniciar Sesión</span>
+                    }
+                </MudButton>
+            </MudStack>
+        </EditForm>
+
+        <MudDivider Class="my-6" />
+
+        <MudText Align="Align.Center" Class="grey--text">
+            ¿No tiene una cuenta?
+            <MudLink Href="/auth/register" Color="Color.Primary">Regístrese aquí</MudLink>
+        </MudText>
+    </MudPaper>
+
+    <MudText Align="Align.Center" Typo="Typo.caption" Class="mt-8 grey--text">
+        © @DateTime.Now.Year DAM - Device Activity Monitor. v1.0.0
+    </MudText>
+</MudContainer>
 
 @code {
+    [Inject] private IAuthService AuthService { get; set; } = null!;
+    [Inject] private NavigationManager Navigation { get; set; } = null!;
+    [Inject] private ISnackbar Snackbar { get; set; } = null!;
 
+    // ✅ Credenciales pre-cargadas para ganar tiempo en pruebas
+    private LoginModel _loginModel = new()
+    {
+        Email = "admin@dam.com",
+        Password = "Admin123!"
+    };
+
+    private bool _rememberMe = true;
+    private bool _isLoading = false;
+
+    public class LoginModel
+    {
+        [Required(ErrorMessage = "El correo electrónico es obligatorio")]
+        [EmailAddress(ErrorMessage = "Formato inválido")]
+        public string Email { get; set; } = string.Empty;
+
+        [Required(ErrorMessage = "La contraseña es obligatoria")]
+        public string Password { get; set; } = string.Empty;
+    }
+
+    // private async Task HandleLogin()
+    // {
+    //     if (_isLoading) return;
+    //     try
+    //     {
+    //         _isLoading = true;
+    //         var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+    //         if (success)
+    //         {
+    //             Snackbar.Add("✅ ¡Bienvenido!", Severity.Success);
+    //             Navigation.NavigateTo("/", true);
+    //         }
+    //         else
+    //         {
+    //             Snackbar.Add("❌ Credenciales inválidas", Severity.Error);
+    //             _loginModel.Password = string.Empty;
+    //         }
+    //     }
+    //     // 🛠️ FIX: Ignorar la excepción de navegación
+    //     catch (Microsoft.AspNetCore.Components.NavigationException)
+    //     {
+    //         // No hacer nada, es el comportamiento normal de Blazor al navegar
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Snackbar.Add($"❌ Error: {ex.Message}", Severity.Error);
+    //     }
+    //     finally
+    //     {
+    //         _isLoading = false;
+    //     }
+    // }
+
+    private async Task HandleLogin()
+    {
+        if (_isLoading) return;
+
+        try
+        {
+            _isLoading = true;
+            StateHasChanged();
+
+            // _logger.LogInformation("🔐 Intentando login para: {Email}", _loginModel.Email);
+
+            var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+
+            if (success)
+            {
+                // _logger.LogInformation("✅ Login exitoso para: {Email}", _loginModel.Email);
+
+                Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success, config =>
+                {
+                    config.Icon = Icons.Material.Filled.CheckCircle;
+                    config.VisibleStateDuration = 3000;
+                });
+
+                // 🚀 Forzar recarga completa para actualizar estado de autenticación
+                Navigation.NavigateTo("/", false);
+
+                // ⚠️ El código después de NavigateTo con true NO se ejecuta
+            }
+            else
+            {
+                // _logger.LogWarning("⚠️ Login fallido para: {Email}", _loginModel.Email);
+
+                Snackbar.Add("❌ Credenciales inválidas", Severity.Error, config =>
+                {
+                    config.Icon = Icons.Material.Filled.Error;
+                    config.VisibleStateDuration = 5000;
+                });
+
+                _loginModel.Password = string.Empty;
+            }
+        }
+        catch (NavigationException)
+        {
+            // ✅ Ignorar - es el comportamiento esperado
+            // La navegación está en progreso
+        }
+        catch (HttpRequestException ex)
+        {
+            // _logger.LogError(ex, "🌐 Error de conexión");
+            Snackbar.Add($"❌ No se pudo conectar con el servidor", Severity.Error);
+        }
+        catch (Exception ex)
+        {
+            // _logger.LogError(ex, "❌ Error inesperado en login");
+            Snackbar.Add($"❌ Error inesperado: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            // Solo se ejecuta si NavigateTo no fue con true
+            if (!_isLoading)
+            {
+                _isLoading = false;
+                StateHasChanged();
+            }
+        }
+    }
+
+    // private async Task HandleLogin()
+    // {
+    //     if (_isLoading) return;
+
+    //     try
+    //     {
+    //         _isLoading = true;
+    //         StateHasChanged();
+
+    //         var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
+
+    //         if (success)
+    //         {
+    //             Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success, config =>
+    //             {
+    //                 config.Icon = Icons.Material.Filled.CheckCircle;
+    //                 config.VisibleStateDuration = 3000;
+    //             });
+
+    //             // 🚀 1. CAMBIAR A true PARA FORZAR RECARGA COMPLETA
+    //             Navigation.NavigateTo("/", false);
+
+    //             // ⚠️ El código después de NavigateTo con true NO se ejecuta
+    //             // Así que no necesitamos preocuparnos por el finally
+    //         }
+    //         else
+    //         {
+    //             Snackbar.Add("❌ Credenciales inválidas", Severity.Error, config =>
+    //             {
+    //                 config.Icon = Icons.Material.Filled.Error;
+    //                 config.VisibleStateDuration = 5000;
+    //             });
+
+    //             _loginModel.Password = string.Empty;
+    //             _isLoading = false;
+    //             StateHasChanged();
+    //         }
+    //     }
+    //     catch (NavigationException)
+    //     {
+    //         // 🚨 2. NO HACER NADA - RELANZAR PARA QUE BLAZOR LA MANEJE
+    //         throw; // 👈 ESTO ES CRÍTICO
+    //     }
+    //     catch (HttpRequestException ex)
+    //     {
+    //         Snackbar.Add($"❌ No se pudo conectar con el servidor", Severity.Error);
+    //         _isLoading = false;
+    //         StateHasChanged();
+    //     }
+    //     catch (Exception ex)
+    //     {
+    //         Snackbar.Add($"❌ Error inesperado: {ex.Message}", Severity.Error);
+    //         _isLoading = false;
+    //         StateHasChanged();
+    //     }
+    //     // 🚨 3. ELIMINAR EL FINALLY COMPLETAMENTE
+    // }
+
+    protected override async Task OnInitializedAsync()
+    {
+        if (await AuthService.IsAuthenticatedAsync())
+        {
+            Navigation.NavigateTo("/", false);
+        }
+    }
 }

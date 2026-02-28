@@ -1,5 +1,84 @@
-﻿<h3>DataGrid</h3>
+﻿@using MudBlazor
+@typeparam TItem
+
+<MudTable Items="@Items"
+          Hover="true"
+          Striped="true"
+          Bordered="true"
+          Loading="@Loading"
+          LoadingProgressColor="@Color.Primary">
+
+    <ToolBarContent>
+        @if (ShowSearch)
+        {
+            <MudTextField T="string"
+                          Value="@SearchTerm"
+                          ValueChanged="@OnSearchChanged"
+                          Placeholder="🔍 Buscar..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Clearable="true"
+                          Class="flex-grow-1" />
+        }
+
+        @if (ShowRefresh)
+        {
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                           OnClick="@OnRefresh"
+                           Size="Size.Small"
+                           Variant="Variant.Outlined"
+                           Class="ml-2" />
+        }
+
+        @ToolBarContent
+    </ToolBarContent>
+
+    <HeaderContent>
+        @HeaderTemplate
+    </HeaderContent>
+
+    <RowTemplate>
+        @RowTemplate(context)
+    </RowTemplate>
+
+    <PagerContent>
+        <MudTablePager PageSizeOptions="@PageSizeOptions" />
+    </PagerContent>
+
+    <NoRecordsContent>
+        <MudText Align="Align.Center" Class="py-6 grey--text">
+            <MudIcon Icon="@Icons.Material.Filled.Inbox" Class="mr-2" />
+            @EmptyText
+        </MudText>
+    </NoRecordsContent>
+
+    <LoadingContent>
+        <MudStack AlignItems="AlignItems.Center" Class="py-12">
+            <MudProgressCircular Indeterminate="true" Size="Size.Large" />
+            <MudText Class="mt-4 grey--text">Cargando datos...</MudText>
+        </MudStack>
+    </LoadingContent>
+</MudTable>
 
 @code {
+    [Parameter] public IEnumerable<TItem> Items { get; set; } = Enumerable.Empty<TItem>();
+    [Parameter] public RenderFragment HeaderTemplate { get; set; } = null!;
+    [Parameter] public RenderFragment<TItem> RowTemplate { get; set; } = null!;
+    [Parameter] public RenderFragment? ToolBarContent { get; set; }
+    [Parameter] public bool Loading { get; set; }
+    [Parameter] public bool ShowSearch { get; set; } = true;
+    [Parameter] public bool ShowRefresh { get; set; } = true;
+    [Parameter] public EventCallback OnRefresh { get; set; }
+    [Parameter] public string EmptyText { get; set; } = "No hay datos disponibles";
+    [Parameter] public int[] PageSizeOptions { get; set; } = { 10, 25, 50, 100 };
 
+    [Parameter] public string SearchTerm { get; set; } = string.Empty;
+    [Parameter] public EventCallback<string> SearchTermChanged { get; set; }
+
+    private async Task OnSearchChanged(string value)
+    {
+        SearchTerm = value;
+        await SearchTermChanged.InvokeAsync(value);
+    }
 }

@@ -1,5 +1,46 @@
-﻿<h3>StatusBadge</h3>
+﻿@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/UI/StatusBadge.razor *@
+
+@{
+    var color = Status.ToLower() switch
+    {
+        "active" or "activo" or "success" => Color.Success,
+        "warning" or "advertencia" => Color.Warning,
+        "error" or "critical" or "critical" => Color.Error,
+        "info" or "information" => Color.Info,
+        "default" => Color.Default,
+        _ => Color.Default
+    };
+    
+    var icon = Status.ToLower() switch
+    {
+        "active" or "activo" => Icons.Material.Filled.CheckCircle,
+        "warning" => Icons.Material.Filled.Warning,
+        "error" or "critical" => Icons.Material.Filled.Error,
+        "info" => Icons.Material.Filled.Info,
+        "completed" or "finalizado" => Icons.Material.Filled.DoneAll,
+        "pending" or "pendiente" => Icons.Material.Filled.Schedule,
+        _ => null
+    };
+}
+
+<MudChip T="string" Size="@Size"
+         Color="@color"
+         Variant="@Variant"
+         Class="@Class"
+         Style="@Style">
+    @if (!string.IsNullOrEmpty(icon))
+    {
+        <MudIcon Icon="@icon" Size="Size.Small" Class="mr-1" />
+    }
+    @Text
+</MudChip>
 
 @code {
-
+    [Parameter] public string Status { get; set; } = "";
+    [Parameter] public string Text { get; set; } = "";
+    [Parameter] public Size Size { get; set; } = Size.Small;
+    [Parameter] public Variant Variant { get; set; } = Variant.Filled;
+    [Parameter] public string? Class { get; set; }
+    [Parameter] public string? Style { get; set; }
 }

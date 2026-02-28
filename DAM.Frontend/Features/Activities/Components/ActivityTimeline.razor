@@ -1,5 +1,82 @@
-﻿<h3>ActivityTimeline</h3>
+﻿@* 📁 DAM.Frontend/Features/Activities/Components/ActivityTimeline.razor *@
+@namespace DAM.Frontend.Features.Activities.Components
+@using DAM.Frontend.Core.Models.Activities
+@using MudBlazor
+
+<MudStack>
+    @if (Activities == null || !Activities.Any())
+    {
+        <MudAlert Severity="Severity.Info" Variant="Variant.Text">
+            No hay actividades para mostrar en la línea de tiempo.
+        </MudAlert>
+    }
+    else
+    {
+        <MudTimeline TimelinePosition="TimelinePosition.Alternate">
+            @foreach (var activity in Activities.OrderBy(a => a.InsertedAt))
+            {
+                <MudTimelineItem>
+                    <TimelineDot Color="GetTimelineColor(activity)" Size="Size.Medium">
+                        <MudIcon Icon="@GetTimelineIcon(activity)" Size="Size.Small" />
+                    </TimelineDot>
+                    <MudCard Elevation="1" Class="mud-width-350">
+                        <MudCardContent>
+                            <MudText Typo="Typo.body2" Class="grey--text">
+                                @activity.InsertedAt?.ToString("dd/MM/yyyy HH:mm:ss")
+                            </MudText>
+                            <MudText Typo="Typo.h6" Class="mt-2">
+                                <MudIcon Icon="@Icons.Material.Filled.Usb" Size="Size.Small" />
+                                @activity.SerialNumber
+                            </MudText>
+                            <MudText Typo="Typo.body2">@activity.Model</MudText>
+                            
+                            <MudDivider Class="my-2" />
+                            
+                            <MudStack Row="true" Justify="Justify.SpaceBetween">
+                                <MudText Typo="Typo.caption">
+                                    <span class="font-weight-bold">@activity.GbProcessed.ToString("F2") GB</span> procesados
+                                </MudText>
+                                <StatusBadge Status="@(activity.IsActive ? "Activo" : "Finalizado")"
+                                            Text="@(activity.IsActive ? "🟢 Activo" : "⚪ Finalizado")" />
+                            </MudStack>
+
+                            @if (activity.Duration.HasValue)
+                            {
+                                <MudText Typo="Typo.caption" Class="mt-2 grey--text">
+                                    ⏱️ Duración: @FormatDuration(activity.Duration.Value)
+                                </MudText>
+                            }
+                        </MudCardContent>
+                    </MudCard>
+                </MudTimelineItem>
+            }
+        </MudTimeline>
+    }
+</MudStack>
 
 @code {
+    [Parameter] public List<ActivityDto>? Activities { get; set; }
 
+    private Color GetTimelineColor(ActivityDto activity)
+    {
+        if (activity.IsActive) return Color.Success;
+        if (activity.GbProcessed > 10) return Color.Warning;
+        return Color.Default;
+    }
+
+    private string GetTimelineIcon(ActivityDto activity)
+    {
+        if (activity.IsActive) return Icons.Material.Filled.PlayCircle;
+        if (activity.GbProcessed > 10) return Icons.Material.Filled.Warning;
+        return Icons.Material.Filled.CheckCircle;
+    }
+
+    private string FormatDuration(TimeSpan duration)
+    {
+        if (duration.TotalDays >= 1)
+            return $"{duration.Days}d {duration.Hours}h";
+        if (duration.TotalHours >= 1)
+            return $"{duration.Hours}h {duration.Minutes}m";
+        return $"{duration.Minutes}m {duration.Seconds}s";
+    }
 }

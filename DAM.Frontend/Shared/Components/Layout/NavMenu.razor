@@ -1,5 +1,100 @@
-﻿<h3>NavMenu</h3>
+﻿@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Auth
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Routing
+@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/Layout/NavMenu.razor *@
+@inject IAuthService AuthService
+@inject NavigationManager Navigation
+
+<MudNavMenu>
+    <MudNavGroup Title="📊 Dashboard" 
+                 Icon="@Icons.Material.Filled.Dashboard" 
+                 Expanded="true">
+        
+        <MudNavLink Href="/" Match="NavLinkMatch.All">
+            <MudIcon Icon="@Icons.Material.Filled.Home" Class="mr-2" />
+            📈 Resumen General
+        </MudNavLink>
+    </MudNavGroup>
+
+    <MudDivider Class="my-4" />
+
+    <MudNavGroup Title="📱 Dispositivos" 
+                 Icon="@Icons.Material.Filled.Devices" 
+                 Expanded="false">
+        
+        <MudNavLink Href="/activities">
+            <MudIcon Icon="@Icons.Material.Filled.List" Class="mr-2" />
+            📋 Actividades
+        </MudNavLink>
+        
+        <MudNavLink Href="/presence">
+            <MudIcon Icon="@Icons.Material.Filled.OnlinePrediction" Class="mr-2" />
+            👤 Presencia
+        </MudNavLink>
+    </MudNavGroup>
+
+    <AuthorizeView Roles="Manager">
+        <Authorized>
+            <MudNavGroup Title="💰 Facturación" 
+                         Icon="@Icons.Material.Filled.RequestQuote" 
+                         Expanded="false">
+                
+                <MudNavLink Href="/invoices">
+                    <MudIcon Icon="@Icons.Material.Filled.Receipt" Class="mr-2" />
+                    📄 Facturas
+                </MudNavLink>
+            </MudNavGroup>
+
+            <MudNavGroup Title="📋 Auditoría" 
+                         Icon="@Icons.Material.Filled.AudioFile" 
+                         Expanded="false">
+                
+                <MudNavLink Href="/audit">
+                    <MudIcon Icon="@Icons.Material.Filled.History" Class="mr-2" />
+                    📝 Registros
+                </MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
+
+    <MudNavGroup Title="⚙️ Sistema" 
+                 Icon="@Icons.Material.Filled.Settings" 
+                 Expanded="false">
+        
+        <MudNavLink Href="/system/events">
+            <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" />
+            📊 Caja Negra
+        </MudNavLink>
+    </MudNavGroup>
+
+    <AuthorizeView>
+        <Authorized>
+            <MudNavGroup Title="👤 Mi Cuenta" 
+                         Icon="@Icons.Material.Filled.AccountCircle" 
+                         Expanded="false">
+                
+                <MudNavLink Href="/profile">
+                    <MudIcon Icon="@Icons.Material.Filled.Person" Class="mr-2" />
+                    Perfil
+                </MudNavLink>
+                
+                <MudNavLink Href="/2fa/setup">
+                    <MudIcon Icon="@Icons.Material.Filled.Lock" Class="mr-2" />
+                    Seguridad 2FA
+                </MudNavLink>
+            </MudNavGroup>
+        </Authorized>
+    </AuthorizeView>
+</MudNavMenu>
 
 @code {
-
+    private ProfileResponse? _profile;
+    
+    protected override async Task OnInitializedAsync()
+    {
+        _profile = await AuthService.GetCurrentUserAsync();
+        StateHasChanged();
+    }
 }

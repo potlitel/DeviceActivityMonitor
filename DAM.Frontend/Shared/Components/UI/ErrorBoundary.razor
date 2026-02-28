@@ -1,5 +1,37 @@
-﻿<h3>ErrorBoundary</h3>
+﻿@using MudBlazor
+@* 📁 DAM.Frontend/Shared/Components/UI/ErrorBoundary.razor *@
+
+<MudOverlay Visible="@HasError" DarkBackground="true" Absolute="true">
+    <MudContainer MaxWidth="MaxWidth.Small" Class="mt-16">
+        <MudPaper Elevation="3" Class="pa-8 text-center">
+            <MudStack AlignItems="AlignItems.Center">
+                <MudAvatar Color="Color.Error" Size="Size.Large" Variant="Variant.Filled">
+                    <MudIcon Icon="@Icons.Material.Filled.Error" Size="Size.Large" />
+                </MudAvatar>
+                
+                <MudText Typo="Typo.h5" Class="mt-4">
+                    @Title
+                </MudText>
+                
+                <MudText Typo="Typo.body1" Class="grey--text">
+                    @Message
+                </MudText>
+                
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          OnClick="@OnRetry"
+                          Class="mt-4">
+                    <MudIcon Icon="@Icons.Material.Filled.Refresh" Class="mr-2" />
+                    Reintentar
+                </MudButton>
+            </MudStack>
+        </MudPaper>
+    </MudContainer>
+</MudOverlay>
 
 @code {
-
+    [Parameter] public bool HasError { get; set; }
+    [Parameter] public string Title { get; set; } = "Ha ocurrido un error";
+    [Parameter] public string Message { get; set; } = "No se pudo cargar la información solicitada.";
+    [Parameter] public EventCallback OnRetry { get; set; }
 }

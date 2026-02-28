@@ -1,5 +1,192 @@
-﻿<h3>ServiceEvents</h3>
+﻿@* 📁 DAM.Frontend/Features/System/Pages/ServiceEvents.razor *@
+@page "/system/events"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.System
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@attribute [Authorize(Roles = "Manager")]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<PageTitle>Caja Negra - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.Warning" Class="mr-2" Color="Color.Warning" />
+    📊 Caja Negra - Eventos del Sistema
+</MudText>
+
+<MudAlert Severity="Severity.Info" Class="mb-6" Variant="Variant.Text">
+    <MudIcon Icon="@Icons.Material.Filled.Info" Class="mr-2" />
+    Eventos generados por el Servicio de Monitoreo en Segundo Plano (Windows Service)
+</MudAlert>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <!-- Filtros -->
+    <MudGrid Class="mb-6">
+        @* <MudItem xs="12" md="4">
+            <MudSelect @bind-Value="@_filter.Level"
+                      Placeholder="📌 Todos los niveles"
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Clearable="true"
+                      FullWidth="true">
+                <MudSelectItem Value="Error">❌ Error</MudSelectItem>
+                <MudSelectItem Value="Warning">⚠️ Advertencia</MudSelectItem>
+                <MudSelectItem Value="Information">ℹ️ Información</MudSelectItem>
+            </MudSelect>
+        </MudItem> *@
+        <MudItem xs="12" md="4">
+        @* Cambiamos el binding al campo local _selectedLevel *@
+        <MudSelect @bind-Value="@_selectedLevel"
+                   Placeholder="📌 Todos los niveles"
+                   Variant="Variant.Outlined"
+                   Margin="Margin.Dense"
+                   Clearable="true"
+                   FullWidth="true">
+            <MudSelectItem Value="@((EventLevel?)EventLevel.Error)">❌ Error</MudSelectItem>
+            <MudSelectItem Value="@((EventLevel?)EventLevel.Warning)">⚠️ Advertencia</MudSelectItem>
+            <MudSelectItem Value="@((EventLevel?)EventLevel.Information)">ℹ️ Información</MudSelectItem>
+        </MudSelect>
+        </MudItem>
+        
+        @* <MudItem xs="12" md="4">
+            <MudTextField @bind-Value="@_filter.Source"
+                         Placeholder="🔧 Filtrar por origen..."
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Immediate="true"
+                         Clearable="true"
+                         FullWidth="true" />
+        </MudItem> *@
+        <MudItem xs="12" md="4">
+        @* Cambiamos el binding al campo local _searchSource *@
+        <MudTextField @bind-Value="@_searchSource"
+                      Placeholder="🔧 Filtrar por origen..."
+                      Variant="Variant.Outlined"
+                      Margin="Margin.Dense"
+                      Immediate="true"
+                      Clearable="true"
+                      FullWidth="true" />
+        </MudItem>
+        
+        <MudItem xs="12" md="4" Class="d-flex align-center">
+            <MudIconButton Icon="@Icons.Material.Filled.Search"
+                          OnClick="@LoadEvents"
+                          Color="Color.Primary"
+                          Variant="Variant.Filled"
+                          Size="Size.Medium"
+                          Class="mr-2" />
+            
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                          OnClick="@LoadEvents"
+                          Size="Size.Medium"
+                          Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+
+    <!-- Grid de eventos -->
+    <DataGrid TItem="ServiceEventDto"
+             Items="@_events"
+             Loading="@_isLoading"
+             ShowSearch="false"
+             ShowRefresh="false"
+             EmptyText="No hay eventos del sistema registrados">
+        
+        <HeaderTemplate>
+            <MudTh>⏰ Fecha</MudTh>
+            <MudTh>📌 Nivel</MudTh>
+            <MudTh>🔧 Origen</MudTh>
+            <MudTh>📝 Mensaje</MudTh>
+            <MudTh>⚙️ Acciones</MudTh>
+        </HeaderTemplate>
+        
+        <RowTemplate>
+            <MudTd DataLabel="Fecha">
+                @context.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+            </MudTd>
+            <MudTd DataLabel="Nivel">
+                <MudChip T="string"
+                         Size="Size.Small" 
+                         Color="@(context.LevelColor switch {
+                            "error" => Color.Error,
+                            "warning" => Color.Warning,
+                            "info" => Color.Info,
+                            _ => Color.Default
+                        })">
+                    <MudIcon Icon="@context.LevelIcon" Size="Size.Small" Class="mr-1" />
+                    @context.Level
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Origen">@context.Source</MudTd>
+            <MudTd DataLabel="Mensaje">
+                <MudText Style="max-width: 400px;" Class="mud-word-break">
+                    @context.Message
+                </MudText>
+            </MudTd>
+            <MudTd DataLabel="Acciones">
+                <MudIconButton Icon="@Icons.Material.Filled.Visibility"
+                              OnClick="@(() => Navigation.NavigateTo($"/system/events/{context.Id}"))"
+                              Size="Size.Small"
+                              Variant="Variant.Text"
+                              Title="Ver detalles" />
+            </MudTd>
+        </RowTemplate>
+    </DataGrid>
+
+    <!-- Paginación -->
+    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+        <MudPagination Count="@_totalPages" 
+                       Selected="@_filter.PageNumber"
+                       SelectedChanged="@(async (page) => {
+                           _filter = _filter with { PageNumber = page };
+                           await LoadEvents();
+                       })"
+                       ShowFirstButton="true"
+                       ShowLastButton="true" />
+    </MudStack>
+</MudPaper>
 
 @code {
+    [Inject] private NavigationManager Navigation { get; set; }
+    
+    private ServiceEventFilter _filter = new();
+    
+    // VARIABLES LOCALES PARA BINDING (MUTABLES)
+    private EventLevel? _selectedLevel;
+    private string? _searchSource;
 
+    private List<ServiceEventDto> _events = new();
+    private bool _isLoading = true;
+    private int _totalPages = 1;
+
+    protected override async Task OnInitializedAsync() => await LoadEvents();
+
+    private async Task LoadEvents()
+    {
+        try
+        {
+            _isLoading = true;
+
+            // Sincronizamos el filtro inmutable usando 'with'
+            _filter = _filter with { 
+                Level = _selectedLevel, 
+                Source = _searchSource 
+            };
+
+            var result = await ApiClient.GetServiceEventsAsync(_filter);
+            _events = result?.Items ?? new();
+            _totalPages = result?.TotalPages ?? 1;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando eventos: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }
