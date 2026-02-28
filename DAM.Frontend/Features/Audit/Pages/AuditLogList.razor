@@ -1,5 +1,167 @@
-﻿<h3>AuditLogList</h3>
+﻿@* 📁 DAM.Frontend/Features/Audit/Pages/AuditLogList.razor *@
+@page "/audit"
+@using DAM.Frontend.Core.Interfaces
+@using DAM.Frontend.Core.Models.Audit
+@using DAM.Frontend.Shared.Components.Forms
+@using DAM.Frontend.Shared.Components.UI
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using MudBlazor
+@attribute [Authorize(Roles = "Manager")]
+@inject IApiClient ApiClient
+@inject ISnackbar Snackbar
+
+<PageTitle>Auditoría - DAM</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-6">
+    <MudIcon Icon="@Icons.Material.Filled.SpatialAudio" Class="mr-2" Color="Color.Primary" />
+    📋 Registros de Auditoría
+</MudText>
+
+<MudPaper Elevation="1" Class="pa-6">
+    <!-- Filtros avanzados -->
+    <MudGrid Class="mb-6">
+        <MudItem xs="12" md="4">
+            @* <MudTextField @bind-Value="@_filter.Username"
+                         Placeholder="👤 Filtrar por usuario..."
+                         Variant="Variant.Outlined"
+                         Margin="Margin.Dense"
+                         Immediate="true"
+                         Clearable="true"
+                         FullWidth="true" /> *@
+            @* <MudTextField @bind-Value="_searchUsername"
+                          Placeholder="Filtrar por usuario..."
+                          Variant="Variant.Outlined" /> *@
+            <MudTextField @bind-Value="_searchUsername"
+                          Placeholder="Filtrar por usuario..."
+                          Variant="Variant.Outlined"
+                          Margin="Margin.Dense"
+                          Immediate="true"
+                          Clearable="true" />
+        </MudItem>
+        
+        <MudItem xs="12" md="4">
+            <MudDateRangePicker Label="Rango de Auditoría"
+                                @bind-DateRange="_dateRange"
+                                PlaceholderStart="Fecha Inicio"
+                                PlaceholderEnd="Fecha Fin"
+                                Clearable="true"
+                                Margin="Margin.Dense" />
+        </MudItem>
+        
+        <MudItem xs="12" md="4" Class="d-flex align-center">
+            <MudIconButton Icon="@Icons.Material.Filled.Search"
+                          OnClick="@LoadAuditLogs"
+                          Color="Color.Primary"
+                          Variant="Variant.Filled"
+                          Size="Size.Medium"
+                          Class="mr-2" />
+            
+            <MudIconButton Icon="@Icons.Material.Filled.Refresh"
+                          OnClick="@LoadAuditLogs"
+                          Size="Size.Medium"
+                          Variant="Variant.Outlined" />
+        </MudItem>
+    </MudGrid>
+
+    <!-- Grid de auditoría -->
+    <DataGrid TItem="AuditLogDto"
+             Items="@_auditLogs"
+             Loading="@_isLoading"
+             ShowSearch="false"
+             ShowRefresh="false"
+             EmptyText="No hay registros de auditoría">
+        
+        <HeaderTemplate>
+            <MudTh>⏰ Fecha</MudTh>
+            <MudTh>👤 Usuario</MudTh>
+            <MudTh>📌 Acción</MudTh>
+            <MudTh>🔧 Recurso</MudTh>
+            <MudTh>🌐 IP</MudTh>
+            <MudTh>📱 User Agent</MudTh>
+        </HeaderTemplate>
+        
+        <RowTemplate>
+            <MudTd DataLabel="Fecha">
+                @context.Timestamp.ToString("dd/MM/yyyy HH:mm:ss")
+            </MudTd>
+            <MudTd DataLabel="Usuario">
+                <MudText Class="font-weight-medium">@context.Username</MudText>
+            </MudTd>
+            <MudTd DataLabel="Acción">
+                <MudChip T="AuditFilter" Size="Size.Small" Color="Color.Primary" Variant="Variant.Outlined">
+                    @context.Action
+                </MudChip>
+            </MudTd>
+            <MudTd DataLabel="Recurso">@context.Resource</MudTd>
+            <MudTd DataLabel="IP">@context.IpAddress</MudTd>
+            <MudTd DataLabel="User Agent" Class="mud-width-300">
+                <MudText Typo="Typo.caption">@context.UserAgent</MudText>
+            </MudTd>
+        </RowTemplate>
+    </DataGrid>
+
+    <!-- Paginación -->
+    <MudStack Row="true" Justify="Justify.FlexEnd" Class="mt-4">
+        <MudPagination T="AuditFilter"
+                       Count="@_totalPages" 
+                       Selected="@_filter.PageNumber"
+                       SelectedChanged="@(async (page) => {
+                           _filter = _filter with { PageNumber = page };
+                           await LoadAuditLogs();
+                       })"
+                       ShowFirstButton="true"
+                       ShowLastButton="true" />
+    </MudStack>
+</MudPaper>
 
 @code {
+    private AuditFilter _filter = new(null, null, null, 1, 20);
 
+    // Variables locales mutables para el binding de la UI
+    private string? _searchUsername;
+
+    // MudBlazor usa DateRange para agrupar Start y End
+    private DateRange _dateRange = new DateRange(DateTime.Now.AddDays(-7).Date, DateTime.Now.Date);
+
+    private List<AuditLogDto> _auditLogs = new();
+    private bool _isLoading = true;
+    private int _totalPages = 1;
+
+    protected override async Task OnInitializedAsync()
+    {
+        await LoadAuditLogs();
+    }
+
+    private async Task LoadAuditLogs()
+    {
+        try
+        {
+            _isLoading = true;
+
+            // Extraemos los valores del DateRange y sincronizamos el record inmutable
+            // El operador 'with' crea una instancia nueva con los datos actualizados
+            _filter = _filter with
+            {
+                Username = _searchUsername,
+                FromDate = _dateRange.Start, // Extraído de la variable local
+                ToDate = _dateRange.End,     // Extraído de la variable local
+                PageNumber = _filter.PageNumber // Mantenemos la página actual o la reseteamos según lógica
+            };
+
+            var result = await ApiClient.GetAuditLogsAsync(_filter);
+
+            _auditLogs = result.Items.ToList();
+            _totalPages = result.TotalPages;
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add($"❌ Error cargando auditoría: {ex.Message}", Severity.Error);
+        }
+        finally
+        {
+            _isLoading = false;
+            StateHasChanged();
+        }
+    }
 }

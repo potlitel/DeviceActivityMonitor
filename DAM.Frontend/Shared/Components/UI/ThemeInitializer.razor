@@ -1,0 +1,53 @@
+﻿@using DAM.Frontend.Core.Interfaces
+@using Microsoft.JSInterop
+@* 📁 DAM.Frontend/Components/ThemeInitializer.razor *@
+@inject IThemeService ThemeService
+@inject IJSRuntime JSRuntime
+
+@implements IAsyncDisposable
+
+@code {
+    private DotNetObjectReference<ThemeInitializer>? _dotNetRef;
+
+    protected override async Task OnAfterRenderAsync(bool firstRender)
+    {
+        if (firstRender)
+        {
+            try
+            {
+                // Crear referencia para callbacks JS
+                _dotNetRef = DotNetObjectReference.Create(this);
+
+                // Registrar para recibir tema del sistema
+                await JSRuntime.InvokeVoidAsync("themeHelper.registerThemeChange", _dotNetRef);
+
+                // Inicializar tema (esto llama a JS sin problemas ahora)
+                await ThemeService.InitializeThemeAsync();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error inicializando tema: {ex.Message}");
+            }
+        }
+    }
+
+    [JSInvokable]
+    public async Task SystemThemeChanged(string theme)
+    {
+        // Solo actualizar si no hay preferencia guardada
+        var savedTheme = await ThemeService.GetSavedThemeAsync();
+        if (!savedTheme.HasValue)
+        {
+            await ThemeService.SetThemeAsync(theme == "dark", false);
+        }
+    }
+
+    public async ValueTask DisposeAsync()
+    {
+        _dotNetRef?.Dispose();
+        if (_dotNetRef != null)
+        {
+            await JSRuntime.InvokeVoidAsync("themeHelper.unregisterThemeChange");
+        }
+    }
+}

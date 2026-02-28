@@ -20,11 +20,14 @@ namespace DAM.Api.Features.DevicePresence
     /// </para>
     /// <para>
     /// <b>👁️‍🗨️ ¿Qué es un evento de presencia?</b>
-    /// Un evento de presencia es una marca temporal que indica que un dispositivo
-    /// fue detectado en el sistema en un momento específico. Múltiples eventos de
-    /// presencia pueden estar asociados a una misma actividad.
+    /// Un evento de presencia es una marca temporal que indica que un dispositivo 
+    /// fue detectado en el sistema. Múltiples eventos pueden estar asociados a una misma actividad.
     /// </para>
     /// </remarks>
+    /// <response code="200">✅ Evento de presencia encontrado y retornado</response>
+    /// <response code="401">❌ No autenticado o token inválido</response>
+    /// <response code="403">❌ No autorizado - Se requiere rol 'Manager'</response>
+    /// <response code="404">❌ No se encontró evento de presencia con el ID especificado</response>
     public class GetPresenceByIdEndpoint(IDispatcher d) : BaseEndpoint<GetByIdIntRequest, DevicePresenceDto>
     {
         public override void Configure() {
@@ -38,6 +41,13 @@ namespace DAM.Api.Features.DevicePresence
                 .ProducesProblem(403)
                 .ProducesProblem(404)
                 .WithTags("👣 Presencia"));
+
+            Summary(s =>
+            {
+                s.Summary = "👣 [Presencia] Obtiene evento por ID";
+                s.Description = "Recupera la información técnica de una detección de presencia específica.";
+                s.ExampleRequest = new GetByIdIntRequest(101);
+            });
 
         }
         public override async Task HandleAsync(GetByIdIntRequest r, CancellationToken ct)

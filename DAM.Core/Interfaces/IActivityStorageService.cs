@@ -1,4 +1,5 @@
-﻿using DAM.Core.Entities;
+﻿using DAM.Core.DTOs.Heartbeat;
+using DAM.Core.Entities;
 
 namespace DAM.Core.Interfaces
 {
@@ -44,6 +45,11 @@ namespace DAM.Core.Interfaces
         /// <param name="invoice">La factura a almacenar.</param>
         /// <returns>Tarea asíncrona completada.</returns>
         Task StoreInvoiceAsync(Invoice invoice);
+
+        /// <summary>
+        /// Envía el estado de salud y actividad del servicio en tiempo real.
+        /// </summary>
+        Task SendHeartbeatAsync(HeartbeatDto heartbeat);
 
         // Métodos para coordinar la transacción desde el orquestador
         Task BeginTransactionAsync();

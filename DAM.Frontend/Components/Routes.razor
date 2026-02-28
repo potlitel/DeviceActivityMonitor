@@ -1,6 +1,42 @@
-﻿<Router AppAssembly="typeof(Program).Assembly">
+﻿@* <Router AppAssembly="typeof(Program).Assembly">
     <Found Context="routeData">
         <RouteView RouteData="routeData" DefaultLayout="typeof(Layout.MainLayout)" />
         <FocusOnNavigate RouteData="routeData" Selector="h1" />
     </Found>
+</Router>
+ *@
+
+@using DAM.Frontend.Features.Auth.Pages
+@using DAM.Frontend.Features.Dashboard.Pages
+@using DAM.Frontend.Features.Activities.Pages
+@using DAM.Frontend.Features.Presence.Pages
+@using DAM.Frontend.Features.Invoices.Pages
+@using DAM.Frontend.Features.Audit.Pages
+@using DAM.Frontend.Features.System.Pages
+@using DAM.Frontend.Shared.Components.Layout
+@using DAM.Frontend.Shared.Components.UI
+@using MudBlazor
+
+<ThemeInitializer />
+
+<Router AppAssembly="@typeof(Program).Assembly">
+    <Found Context="routeData">
+        <RouteView RouteData="@routeData" DefaultLayout="@typeof(MainLayout)" />
+        <FocusOnNavigate RouteData="@routeData" Selector="h1" />
+    </Found>
+    <NotFound>
+        <LayoutView Layout="@typeof(MainLayout)">
+            <MudContainer Class="text-center mt-16">
+                <MudText Typo="Typo.h1">404</MudText>
+                <MudText Typo="Typo.h4">Página no encontrada</MudText>
+                <MudText Class="mt-4">Lo sentimos, la página que buscas no existe.</MudText>
+                <MudButton Variant="Variant.Filled" 
+                          Color="Color.Primary" 
+                          Href="/"
+                          Class="mt-6">
+                    Volver al Inicio
+                </MudButton>
+            </MudContainer>
+        </LayoutView>
+    </NotFound>
 </Router>

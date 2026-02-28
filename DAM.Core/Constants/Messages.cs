@@ -31,10 +31,17 @@
             public const string PresenceFailed = "FALLO: No se pudo registrar la presencia del dispositivo {SN} al conectar.";
             public const string ActivitySaved = "Actividad del dispositivo {SN} persistida exitosamente.";
             public const string ActivityCritical = "FALLO CRÍTICO: No se pudo persistir la actividad del dispositivo {SN}.";
+            public const string ActivityNotFound = "No se encontró la actividad con el id suministrado.";
             public const string EventSaved = "Evento de servicio '{EventType}' persistido correctamente.";
             public const string EventFailed = "FALLO al persistir el evento de servicio '{EventType}'.";
             public const string InvoiceSaved = "Factura de {Monto:C} calculada y persistida para {SN}.";
             public const string InvoiceFailed = "FALLO CRÍTICO: No se pudo persistir la factura para el dispositivo {SN}.";
+        }
+
+        public static class HeartBeat
+        {
+            public const string HeartBeatSendSuccess = "Información de servicio enviada correctamente";
+            public const string HeartBeatSendError = "No se pudo enviar Información de servicio";
         }
 
         public static class Invoice
