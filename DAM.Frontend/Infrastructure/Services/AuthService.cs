@@ -12,17 +12,20 @@ namespace DAM.Frontend.Infrastructure.Services
     {
         private readonly IApiClient _apiClient;
         private readonly IStorageService _storage;
+        private readonly IInMemoryTokenStorage _memoryStorage;
         private readonly AuthenticationStateProvider _authProvider;
         private readonly ILogger<AuthService> _logger;
 
         public AuthService(
             IApiClient apiClient,
             IStorageService storage,
+            IInMemoryTokenStorage memoryStorage,
             AuthenticationStateProvider authProvider,
             ILogger<AuthService> logger)
         {
             _apiClient = apiClient;
             _storage = storage;
+            _memoryStorage = memoryStorage;
             _authProvider = authProvider;
             _logger = logger;
         }
@@ -109,29 +112,29 @@ namespace DAM.Frontend.Infrastructure.Services
                 }
 
                 _logger.LogInformation("✅ Token recibido: {TokenLength} caracteres", response.Token.Length);
-                _logger.LogDebug("Token: {Token}", response.Token);
-                _logger.LogDebug("Expira: {Expires}", response.ExpiresAt);
 
-                await _storage.SetAsync("auth_token", response.Token);
+                // Guardar en memoria como respaldo (siempre funciona)
+                _memoryStorage.SetToken(response.Token);
+                _memoryStorage.SetExpiry(response.ExpiresAt.ToString("O"));
 
-                if (!string.IsNullOrEmpty(response.RefreshToken))
-                    await _storage.SetAsync("auth_refresh_token", response.RefreshToken);
-
-                await _storage.SetAsync("auth_expiry", response.ExpiresAt.ToString("O"));
-
-                // 🚨 VERIFICAR QUE SE PUEDE LEER INMEDIATAMENTE
-                var savedToken = await _storage.GetAsync<string>("auth_token");
-                _logger.LogInformation("📦 Token recuperado después de guardar: {Result}",
-                    savedToken != null ? "✅ OK" : "❌ NULL");
-
-                if (savedToken == null)
+                // Intentar guardar en storage (puede fallar durante prerendering)
+                try
                 {
-                    _logger.LogError("❌ El token NO se guardó correctamente en storage");
+                    await _storage.SetAsync("auth_token", response.Token);
+
+                    if (!string.IsNullOrEmpty(response.RefreshToken))
+                        await _storage.SetAsync("auth_refresh_token", response.RefreshToken);
+
+                    await _storage.SetAsync("auth_expiry", response.ExpiresAt.ToString("O"));
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogWarning(ex, "⚠️ No se pudo guardar en storage, usando memoria");
                 }
 
                 if (_authProvider is CustomAuthProvider customProvider)
                 {
-                    await customProvider.LoginAsync(response.Token);
+                    customProvider.Login(response.Token);
                 }
 
                 _logger.LogInformation("User logged in successfully: {Email}", email);
@@ -146,11 +149,11 @@ namespace DAM.Frontend.Infrastructure.Services
 
         public async Task LogoutAsync()
         {
-            await _storage.ClearAsync();
+            _memoryStorage.Clear();
 
             if (_authProvider is CustomAuthProvider customProvider)
             {
-                await customProvider.LogoutAsync();
+                customProvider.Logout();
             }
 
             _logger.LogInformation("User logged out");
@@ -168,10 +171,20 @@ namespace DAM.Frontend.Infrastructure.Services
 
         public async Task<bool> IsAuthenticatedAsync()
         {
+            // Intentar obtener del storage primero, luego de memoria
             var token = await _storage.GetAsync<string>("auth_token");
+            if (string.IsNullOrEmpty(token))
+            {
+                token = _memoryStorage.GetToken();
+            }
             if (string.IsNullOrEmpty(token)) return false;
 
             var expiry = await _storage.GetAsync<string>("auth_expiry");
+            if (string.IsNullOrEmpty(expiry))
+            {
+                expiry = _memoryStorage.GetExpiry();
+            }
+            
             if (!string.IsNullOrEmpty(expiry) && DateTime.TryParse(expiry, out var expiryDate))
             {
                 if (expiryDate < DateTime.UtcNow)
@@ -185,7 +198,18 @@ namespace DAM.Frontend.Infrastructure.Services
         }
 
         public async Task<string?> GetTokenAsync()
-            => await _storage.GetAsync<string>("auth_token");
+        {
+            // Intentar obtener del storage
+            var token = await _storage.GetAsync<string>("auth_token");
+            
+            // Si no se encontró, usar el almacenamiento en memoria como respaldo
+            if (string.IsNullOrEmpty(token))
+            {
+                token = _memoryStorage.GetToken();
+            }
+            
+            return token;
+        }
 
         public async Task<ProfileResponse?> GetCurrentUserAsync()
         {

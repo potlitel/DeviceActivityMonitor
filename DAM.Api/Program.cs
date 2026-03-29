@@ -20,7 +20,7 @@ builder.Services
 var app = builder.Build();
 
 // 🎯 PIPELINE DE LA APLICACIÓN
-app.UseCors("DefaultPolicy");
+app.UseCors("DAMPolicy");
 app.UseAuthentication();
 app.UseAuthorization();
 

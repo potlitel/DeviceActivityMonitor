@@ -1,5 +1,6 @@
 ﻿using DAM.Frontend.Core.Interfaces;
 using DAM.Frontend.Infrastructure.Extensions;
+using DAM.Frontend.Infrastructure.Services;
 using Microsoft.AspNetCore.Components.Authorization;
 using System.Security.Claims;
 
@@ -8,14 +9,17 @@ namespace DAM.Frontend.Infrastructure.Authentication
     public class CustomAuthProvider : AuthenticationStateProvider
     {
         private readonly IStorageService _storage;
+        private readonly IInMemoryTokenStorage _memoryStorage;
         private readonly ILogger<CustomAuthProvider> _logger;
         private readonly AuthenticationState _anonymous;
 
         public CustomAuthProvider(
             IStorageService storage,
+            IInMemoryTokenStorage memoryStorage,
             ILogger<CustomAuthProvider> logger)
         {
             _storage = storage;
+            _memoryStorage = memoryStorage;
             _logger = logger;
             _anonymous = new AuthenticationState(new ClaimsPrincipal(new ClaimsIdentity()));
         }
@@ -24,18 +28,27 @@ namespace DAM.Frontend.Infrastructure.Authentication
         {
             try
             {
+                // Intentar obtener del storage primero, luego de memoria
                 var token = await _storage.GetAsync<string>("auth_token");
+                if (string.IsNullOrEmpty(token))
+                {
+                    token = _memoryStorage.GetToken();
+                }
 
                 if (string.IsNullOrEmpty(token))
                     return _anonymous;
 
                 var expiry = await _storage.GetAsync<string>("auth_expiry");
+                if (string.IsNullOrEmpty(expiry))
+                {
+                    expiry = _memoryStorage.GetExpiry();
+                }
 
                 if (!string.IsNullOrEmpty(expiry) &&
                     DateTime.TryParse(expiry, out var expiryDate) &&
                     expiryDate < DateTime.UtcNow)
                 {
-                    await LogoutAsync();
+                    Logout();
                     return _anonymous;
                 }
 
@@ -52,9 +65,9 @@ namespace DAM.Frontend.Infrastructure.Authentication
             }
         }
 
-        public async Task LoginAsync(string token)
+        public void Login(string token)
         {
-            await _storage.SetAsync("auth_token", token);
+            _memoryStorage.SetToken(token);
 
             var claims = JwtParser.ParseClaimsFromJwt(token);
             var identity = new ClaimsIdentity(claims, "jwt");
@@ -64,9 +77,9 @@ namespace DAM.Frontend.Infrastructure.Authentication
             NotifyAuthenticationStateChanged(Task.FromResult(state));
         }
 
-        public async Task LogoutAsync()
+        public void Logout()
         {
-            await _storage.ClearAsync();
+            _memoryStorage.Clear();
             NotifyAuthenticationStateChanged(Task.FromResult(_anonymous));
         }
     }

@@ -17,6 +17,7 @@ namespace DAM.Frontend.Infrastructure.Extensions
             // 📦 Storage
             services.AddScoped<ProtectedLocalStorage>();
             services.AddScoped<IStorageService, StorageService>();
+            services.AddSingleton<IInMemoryTokenStorage, InMemoryTokenStorage>();
 
             // 🌐 HTTP Client
             services.AddHttpClient<IApiClient, ApiClient>(client =>

@@ -1,6 +1,7 @@
 ﻿// 📁 DAM.Frontend/Infrastructure/Services/StorageService.cs
-using DAM.Frontend.Core.Interfaces;
+﻿using DAM.Frontend.Core.Interfaces;
 using Microsoft.AspNetCore.Components.Server.ProtectedBrowserStorage;
+using Microsoft.JSInterop;
 using System.Text.Json;
 
 namespace DAM.Frontend.Infrastructure.Services;
@@ -11,14 +12,17 @@ namespace DAM.Frontend.Infrastructure.Services;
 public class StorageService : IStorageService
 {
     private readonly ProtectedLocalStorage _localStorage;
+    private readonly IJSRuntime _jsRuntime;
     private readonly ILogger<StorageService> _logger;
     private readonly JsonSerializerOptions _jsonOptions;
 
     public StorageService(
         ProtectedLocalStorage localStorage,
+        IJSRuntime jsRuntime,
         ILogger<StorageService> logger)
     {
         _localStorage = localStorage ?? throw new ArgumentNullException(nameof(localStorage));
+        _jsRuntime = jsRuntime ?? throw new ArgumentNullException(nameof(jsRuntime));
         _logger = logger ?? throw new ArgumentNullException(nameof(logger));
         _jsonOptions = new JsonSerializerOptions
         {
@@ -42,7 +46,8 @@ public class StorageService : IStorageService
 
             if (!result.Success || string.IsNullOrEmpty(result.Value))
             {
-                _logger.LogDebug("🔍 No se encontró valor para {Key}", key);
+                // Durante prerendering, el resultado no será exitoso
+                // Retornamos default sin log de advertencia
                 return default;
             }
 
@@ -67,8 +72,7 @@ public class StorageService : IStorageService
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
         {
-            // Error esperado durante prerendering - ignorar silenciosamente
-            _logger.LogDebug("⚠️ Intento de acceso a storage durante prerendering: {Key}", key);
+            // Silenciosamente retornar default durante prerendering
             return default;
         }
         catch (Exception ex)
@@ -98,8 +102,19 @@ public class StorageService : IStorageService
         }
         catch (InvalidOperationException ex) when (ex.Message.Contains("JavaScript interop"))
         {
-            // Error esperado durante prerendering - registrar pero no fallar
-            _logger.LogWarning("⚠️ Intento de guardar en storage durante prerendering: {Key}", key);
+            // Durante prerendering, intentar usar JSRuntime directamente
+            _logger.LogWarning("⚠️ Usando JSRuntime directo para guardar {Key}", key);
+            
+            try
+            {
+                var json = JsonSerializer.Serialize(value, _jsonOptions);
+                await _jsRuntime.InvokeVoidAsync("localStorage.setItem", key, json);
+                _logger.LogDebug("✅ Valor guardado via JSRuntime para {Key}", key);
+            }
+            catch (Exception jsEx)
+            {
+                _logger.LogWarning(jsEx, "⚠️ No se pudo guardar en localStorage para {Key}", key);
+            }
         }
         catch (Exception ex)
         {

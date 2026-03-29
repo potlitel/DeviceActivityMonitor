@@ -1,4 +1,4 @@
-﻿@* 📁 DAM.Frontend/Features/Auth/Pages/Login.razor *@
+@* 📁 DAM.Frontend/Features/Auth/Pages/Login.razor *@
 @page "/auth/login"
 @layout AuthLayout
 @using DAM.Frontend.Core.Models.Auth
@@ -34,7 +34,6 @@
             </MudStack>
         </MudAlert>
 
-        @* ✅ FormName corregido para .NET 8 *@
         <EditForm Model="@_loginModel"
                   OnValidSubmit="@HandleLogin"
                   FormName="loginForm">
@@ -101,7 +100,6 @@
     [Inject] private NavigationManager Navigation { get; set; } = null!;
     [Inject] private ISnackbar Snackbar { get; set; } = null!;
 
-    // ✅ Credenciales pre-cargadas para ganar tiempo en pruebas
     private LoginModel _loginModel = new()
     {
         Email = "admin@dam.com",
@@ -121,169 +119,42 @@
         public string Password { get; set; } = string.Empty;
     }
 
-    // private async Task HandleLogin()
-    // {
-    //     if (_isLoading) return;
-    //     try
-    //     {
-    //         _isLoading = true;
-    //         var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
-    //         if (success)
-    //         {
-    //             Snackbar.Add("✅ ¡Bienvenido!", Severity.Success);
-    //             Navigation.NavigateTo("/", true);
-    //         }
-    //         else
-    //         {
-    //             Snackbar.Add("❌ Credenciales inválidas", Severity.Error);
-    //             _loginModel.Password = string.Empty;
-    //         }
-    //     }
-    //     // 🛠️ FIX: Ignorar la excepción de navegación
-    //     catch (Microsoft.AspNetCore.Components.NavigationException)
-    //     {
-    //         // No hacer nada, es el comportamiento normal de Blazor al navegar
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Snackbar.Add($"❌ Error: {ex.Message}", Severity.Error);
-    //     }
-    //     finally
-    //     {
-    //         _isLoading = false;
-    //     }
-    // }
-
     private async Task HandleLogin()
     {
         if (_isLoading) return;
 
+        _isLoading = true;
+        StateHasChanged();
+
         try
         {
-            _isLoading = true;
-            StateHasChanged();
-
-            // _logger.LogInformation("🔐 Intentando login para: {Email}", _loginModel.Email);
-
             var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
 
             if (success)
             {
-                // _logger.LogInformation("✅ Login exitoso para: {Email}", _loginModel.Email);
+                Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success);
 
-                Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success, config =>
-                {
-                    config.Icon = Icons.Material.Filled.CheckCircle;
-                    config.VisibleStateDuration = 3000;
-                });
-
-                // 🚀 Forzar recarga completa para actualizar estado de autenticación
-                Navigation.NavigateTo("/", false);
-
-                // ⚠️ El código después de NavigateTo con true NO se ejecuta
+                // Navegar con forceLoad - crea nueva conexión
+                Navigation.NavigateTo("/", true);
             }
             else
             {
-                // _logger.LogWarning("⚠️ Login fallido para: {Email}", _loginModel.Email);
-
-                Snackbar.Add("❌ Credenciales inválidas", Severity.Error, config =>
-                {
-                    config.Icon = Icons.Material.Filled.Error;
-                    config.VisibleStateDuration = 5000;
-                });
-
+                Snackbar.Add("❌ Credenciales inválidas", Severity.Error);
                 _loginModel.Password = string.Empty;
             }
         }
         catch (NavigationException)
         {
-            // ✅ Ignorar - es el comportamiento esperado
-            // La navegación está en progreso
-        }
-        catch (HttpRequestException ex)
-        {
-            // _logger.LogError(ex, "🌐 Error de conexión");
-            Snackbar.Add($"❌ No se pudo conectar con el servidor", Severity.Error);
+            // Ignorar - navegación en progreso
         }
         catch (Exception ex)
         {
-            // _logger.LogError(ex, "❌ Error inesperado en login");
-            Snackbar.Add($"❌ Error inesperado: {ex.Message}", Severity.Error);
+            Snackbar.Add($"❌ Error: {ex.Message}", Severity.Error);
         }
         finally
         {
-            // Solo se ejecuta si NavigateTo no fue con true
-            if (!_isLoading)
-            {
-                _isLoading = false;
-                StateHasChanged();
-            }
-        }
-    }
-
-    // private async Task HandleLogin()
-    // {
-    //     if (_isLoading) return;
-
-    //     try
-    //     {
-    //         _isLoading = true;
-    //         StateHasChanged();
-
-    //         var success = await AuthService.LoginAsync(_loginModel.Email, _loginModel.Password);
-
-    //         if (success)
-    //         {
-    //             Snackbar.Add("✅ ¡Bienvenido! Inicio de sesión exitoso", Severity.Success, config =>
-    //             {
-    //                 config.Icon = Icons.Material.Filled.CheckCircle;
-    //                 config.VisibleStateDuration = 3000;
-    //             });
-
-    //             // 🚀 1. CAMBIAR A true PARA FORZAR RECARGA COMPLETA
-    //             Navigation.NavigateTo("/", false);
-
-    //             // ⚠️ El código después de NavigateTo con true NO se ejecuta
-    //             // Así que no necesitamos preocuparnos por el finally
-    //         }
-    //         else
-    //         {
-    //             Snackbar.Add("❌ Credenciales inválidas", Severity.Error, config =>
-    //             {
-    //                 config.Icon = Icons.Material.Filled.Error;
-    //                 config.VisibleStateDuration = 5000;
-    //             });
-
-    //             _loginModel.Password = string.Empty;
-    //             _isLoading = false;
-    //             StateHasChanged();
-    //         }
-    //     }
-    //     catch (NavigationException)
-    //     {
-    //         // 🚨 2. NO HACER NADA - RELANZAR PARA QUE BLAZOR LA MANEJE
-    //         throw; // 👈 ESTO ES CRÍTICO
-    //     }
-    //     catch (HttpRequestException ex)
-    //     {
-    //         Snackbar.Add($"❌ No se pudo conectar con el servidor", Severity.Error);
-    //         _isLoading = false;
-    //         StateHasChanged();
-    //     }
-    //     catch (Exception ex)
-    //     {
-    //         Snackbar.Add($"❌ Error inesperado: {ex.Message}", Severity.Error);
-    //         _isLoading = false;
-    //         StateHasChanged();
-    //     }
-    //     // 🚨 3. ELIMINAR EL FINALLY COMPLETAMENTE
-    // }
-
-    protected override async Task OnInitializedAsync()
-    {
-        if (await AuthService.IsAuthenticatedAsync())
-        {
-            Navigation.NavigateTo("/", false);
+            _isLoading = false;
+            StateHasChanged();
         }
     }
 }

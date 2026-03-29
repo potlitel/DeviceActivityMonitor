@@ -1,98 +1,224 @@
-﻿# Create-Release.ps1
-# Script para automatizar la publicación y el empaquetado del servicio de Windows.
+﻿# # Create-Release.ps1
+# # Script de empaquetado profesional con transformación dinámica de configuraciones.
 
-# --- Configuración ---
+# $SolutionDir = Split-Path -Parent $PSCommandPath
+# $ReleaseDir = Join-Path -Path $SolutionDir -ChildPath "Releases"
+# $BuildStamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
+# $InstallRoot = "C:\ProgramData\DAM-Suite" 
+# $DbPath = "$InstallRoot\Data\DAM_Database.db"
+
+# # Proyectos a procesar
+# $Projects = @(
+#     @{ Name = "DAM.Host.WindowsService"; Path = "$SolutionDir\DAM.Host.WindowsService\DAM.Host.WindowsService.csproj" },
+#     @{ Name = "DAM.Api"; Path = "$SolutionDir\DAM.Api\DAM.Api.csproj" }
+# )
+
+# # --- Funciones de Transformación Inteligente ---
+# function Transform-AppSettings {
+#     param ([string]$Path, [string]$ProjectName)
+    
+#     if (Test-Path $Path) {
+#         try {
+#             $config = Get-Content $Path -Raw | ConvertFrom-Json
+#             $changed = $false
+
+#             # 1. Transformación de ConnectionStrings (Detecta múltiples nombres)
+#             if ($config.ConnectionStrings) {
+#                 # Caso API: DefaultConnection
+#                 if ($config.ConnectionStrings.DefaultConnection) {
+#                     $config.ConnectionStrings.DefaultConnection = "Data Source=$DbPath"
+#                     $changed = $true
+#                 }
+#                 # Caso Worker: SQLiteConnection
+#                 if ($config.ConnectionStrings.SQLiteConnection) {
+#                     $config.ConnectionStrings.SQLiteConnection = "Data Source=$DbPath"
+#                     $changed = $true
+#                 }
+#             }
+
+#             # 2. Transformación de Serilog (Rutas de Log)
+#             if ($config.Serilog.WriteTo) {
+#                 foreach ($t in $config.Serilog.WriteTo) {
+#                     if ($t.Args -and $t.Args.path) {
+#                         $t.Args.path = "$InstallRoot\Logs\$ProjectName-log.txt"
+#                         $changed = $true
+#                     }
+#                 }
+#             }
+
+#             if ($changed) {
+#                 $config | ConvertTo-Json -Depth 32 | Set-Content $Path -Encoding UTF8
+#                 Write-Host "   [CONFIG] AppSettings de '$ProjectName' actualizado correctamente." -ForegroundColor DarkGray
+#             }
+#         }
+#         catch {
+#             Write-Warning "No se pudo transformar ${Path}: $($_.Exception.Message)"
+#         }
+#     }
+# }
+
+# # --- Proceso Principal ---
+# try {
+#     Write-Host "🚀 Iniciando Generación de Release: $BuildStamp" -ForegroundColor Cyan
+#     $Staging = Join-Path $env:TEMP "DAM_Build_$BuildStamp"
+#     New-Item $Staging -ItemType Directory -Force | Out-Null
+
+#     $i = 0
+#     foreach ($Proj in $Projects) {
+#         $i++
+#         $percent = ($i / $Projects.Count) * 80
+#         Write-Progress -Activity "Compilando Suite DAM" -Status "Procesando: $($Proj.Name)" -PercentComplete $percent
+
+#         $TargetFolder = Join-Path $Staging $Proj.Name
+#         Write-Host "📦 Publicando $($Proj.Name)..." -ForegroundColor Gray
+        
+#         # Publicación .NET
+#         & dotnet publish $Proj.Path -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $TargetFolder --nologo
+        
+#         if ($LASTEXITCODE -ne 0) { throw "Error publicando $($Proj.Name)" }
+        
+#         # Inyectar configuración de producción detectando estructura
+#         Transform-AppSettings -Path (Join-Path $TargetFolder "appsettings.json") -ProjectName $Proj.Name
+#     }
+
+#     # Copiar Script de Instalación (Master-Install -> Install-Suite)
+#     $MasterScript = Join-Path $SolutionDir "DeploymentScripts\Master-Install.ps1"
+#     if (Test-Path $MasterScript) {
+#         Copy-Item $MasterScript -Destination (Join-Path $Staging "Install-Suite.ps1")
+#         Write-Host "📜 Script de instalación inyectado." -ForegroundColor Gray
+#     }
+
+#     # Empaquetado Final
+#     Write-Progress -Activity "Compilando Suite DAM" -Status "Creando ZIP..." -PercentComplete 95
+#     if (!(Test-Path $ReleaseDir)) { New-Item $ReleaseDir -ItemType Directory }
+#     $ZipPath = Join-Path $ReleaseDir "DAM_Release_$BuildStamp.zip"
+#     Compress-Archive -Path "$Staging\*" -DestinationPath $ZipPath -Force
+
+#     # Limpieza y Retención (Mantener últimos 5)
+#     Remove-Item $Staging -Recurse -Force
+#     $Old = Get-ChildItem $ReleaseDir -Filter "*.zip" | Sort-Object LastWriteTime -Descending
+#     if ($Old.Count -gt 5) { $Old | Select-Object -Skip 5 | Remove-Item -Force }
+
+#     Write-Host "`n✅ RELEASE LISTO: $ZipPath" -ForegroundColor Green
+# }
+# catch {
+#     Write-Host "`n❌ ERROR CRÍTICO: $($_.Exception.Message)" -ForegroundColor Red
+#     exit 1
+# }
+# finally { Write-Progress -Activity "Compilando Suite DAM" -Completed }
+
+
+# Create-Release.ps1
+# Script de empaquetado profesional con transformación dinámica y UX mejorada.
+
 $SolutionDir = Split-Path -Parent $PSCommandPath
-$ProjectName = "DAM.Host.WindowsService"
-$ProjectPath = Join-Path -Path $SolutionDir -ChildPath "$ProjectName\$ProjectName.csproj"
-$PublishTempDir = Join-Path -Path $SolutionDir -ChildPath "bin\Release\PublishTemp"
 $ReleaseDir = Join-Path -Path $SolutionDir -ChildPath "Releases"
-$ReleaseZipName = "$ProjectName-Release-$((Get-Date).ToString('yyyyMMdd-HHmmss')).zip"
-$DeploymentScriptSource = Join-Path -Path $SolutionDir -ChildPath "$ProjectName\DeploymentScritps\Deploy-Service.ps1"
-$DeploymentScriptTarget = Join-Path -Path $PublishTempDir -ChildPath "Install-Service.ps1" # Renombrado para simplicidad
+$BuildStamp = (Get-Date).ToString('yyyyMMdd-HHmmss')
+$InstallRoot = "C:\ProgramData\DAM-Suite" 
+$DbPath = "$InstallRoot\Data\DAM_Database.db"
 
-# --- Configuración de Retención ---
-$MaxReleasesToKeep = 5 # Mantener los 5 últimos paquetes de despliegue ZIP.
+# Proyectos a procesar
+$Projects = @(
+    @{ Name = "DAM.Host.WindowsService"; Path = "$SolutionDir\DAM.Host.WindowsService\DAM.Host.WindowsService.csproj" },
+    @{ Name = "DAM.Api"; Path = "$SolutionDir\DAM.Api\DAM.Api.csproj" }
+)
 
-# --- 1. Publicar el Proyecto .NET ---
-Write-Host "1. Publicando proyecto '$ProjectName'..." -ForegroundColor Green
-Remove-Item -Path $PublishTempDir -Recurse -Force -ErrorAction SilentlyContinue
-mkdir $PublishTempDir | Out-Null
+# --- Funciones de Transformación Inteligente ---
+function Transform-AppSettings {
+    param ([string]$Path, [string]$ProjectName)
+    
+    if (Test-Path $Path) {
+        try {
+            $config = Get-Content $Path -Raw | ConvertFrom-Json
+            $changed = $false
 
-& dotnet publish $ProjectPath -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $PublishTempDir
+            # 1. Transformación de ConnectionStrings (Detecta múltiples nombres)
+            if ($config.ConnectionStrings) {
+                # Caso API: DefaultConnection
+                if ($config.ConnectionStrings.DefaultConnection) {
+                    $config.ConnectionStrings.DefaultConnection = "Data Source=$DbPath"
+                    $changed = $true
+                }
+                # Caso Worker: SQLiteConnection
+                if ($config.ConnectionStrings.SQLiteConnection) {
+                    $config.ConnectionStrings.SQLiteConnection = "Data Source=$DbPath"
+                    $changed = $true
+                }
+            }
 
-if ($LASTEXITCODE -ne 0) {
-    Write-Error "La publicación de .NET falló."
+            # 2. Transformación de Serilog (Rutas de Log)
+            if ($config.Serilog.WriteTo) {
+                foreach ($t in $config.Serilog.WriteTo) {
+                    if ($t.Args -and $t.Args.path) {
+                        $t.Args.path = "$InstallRoot\Logs\$ProjectName-log.txt"
+                        $changed = $true
+                    }
+                }
+            }
+
+            if ($changed) {
+                $config | ConvertTo-Json -Depth 32 | Set-Content $Path -Encoding UTF8
+                Write-Host "   [CONFIG] AppSettings de '$ProjectName' actualizado correctamente." -ForegroundColor DarkGray
+            }
+        }
+        catch {
+            Write-Warning "No se pudo transformar ${Path}: $($_.Exception.Message)"
+        }
+    }
+}
+
+# --- Proceso Principal ---
+try {
+    Write-Host "🚀 Iniciando Generación de Release: $BuildStamp" -ForegroundColor Cyan
+    $Staging = Join-Path $env:TEMP "DAM_Build_$BuildStamp"
+    New-Item $Staging -ItemType Directory -Force | Out-Null
+
+    $i = 0
+    foreach ($Proj in $Projects) {
+        $i++
+        $percent = ($i / $Projects.Count) * 80
+        # MEJORA DE UX: Barra de progreso con estado granular
+        Write-Progress -Activity "Compilando Suite DAM" -Status "Procesando NuGet para: $($Proj.Name)" -PercentComplete $percent
+
+        $TargetFolder = Join-Path $Staging $Proj.Name
+        Write-Host "📦 Publicando $($Proj.Name)..." -ForegroundColor Gray
+        
+        # Publicación .NET
+        # MEJORA DE UX: Barra de progreso para la fase de compilación
+        Write-Progress -Activity "Compilando Suite DAM" -Status "Publicando: $($Proj.Name)" -PercentComplete $percent
+        & dotnet publish $Proj.Path -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $TargetFolder --nologo
+        
+        if ($LASTEXITCODE -ne 0) { throw "Error publicando $($Proj.Name)" }
+        
+        # MEJORA DE UX: Barra de progreso para la fase de configuración
+        Write-Progress -Activity "Compilando Suite DAM" -Status "Configurando '$($Proj.Name)' para producción" -PercentComplete $percent
+        # Inyectar configuración de producción detectando estructura
+        Transform-AppSettings -Path (Join-Path $TargetFolder "appsettings.json") -ProjectName $Proj.Name
+    }
+
+    # Copiar Script de Instalación (Master-Install -> Install-Suite)
+    $MasterScript = Join-Path $SolutionDir "DeploymentScripts\Master-Install.ps1"
+    if (Test-Path $MasterScript) {
+        Copy-Item $MasterScript -Destination (Join-Path $Staging "Install-Suite.ps1")
+        Write-Host "📜 Script de instalación inyectado." -ForegroundColor Gray
+    }
+
+    # Empaquetado Final
+    # MEJORA DE UX: Barra de progreso para la fase de ZIP
+    Write-Progress -Activity "Compilando Suite DAM" -Status "Creando paquete ZIP final..." -PercentComplete 95
+    if (!(Test-Path $ReleaseDir)) { New-Item $ReleaseDir -ItemType Directory }
+    $ZipPath = Join-Path $ReleaseDir "DAM_Release_$BuildStamp.zip"
+    Compress-Archive -Path "$Staging\*" -DestinationPath $ZipPath -Force
+
+    # Limpieza y Retención (Mantener últimos 5)
+    Remove-Item $Staging -Recurse -Force
+    $Old = Get-ChildItem $ReleaseDir -Filter "*.zip" | Sort-Object LastWriteTime -Descending
+    if ($Old.Count -gt 5) { $Old | Select-Object -Skip 5 | Remove-Item -Force }
+
+    Write-Host "`n✅ RELEASE LISTO: $ZipPath" -ForegroundColor Green
+}
+catch {
+    Write-Host "`n❌ ERROR CRÍTICO: $($_.Exception.Message)" -ForegroundColor Red
     exit 1
 }
-
-# --- 2. Copiar el Script de Despliegue Relativo ---
-Write-Host "2. Copiando script de despliegue ajustado..." -ForegroundColor Green
-Copy-Item -Path $DeploymentScriptSource -Destination $DeploymentScriptTarget -Force
-# NOTA: Asegúrate que Deploy-Service.ps1 haya sido ajustado (Paso 1)
-
-# --- 3. Generar y Copiar Release Notes ---
-Write-Host "3. Generando archivo de notas de release..." -ForegroundColor Green
-
-$ReleaseNotesContent = @"
-Release Date: $((Get-Date).ToString('yyyy-MM-dd HH:mm:ss'))
-Project: $ProjectName
-Version: 1.0.0.0 (Actualiza esta línea manualmente o con CI/CD)
-Commit Hash: N/A (Se puede añadir integración con Git)
-
-Instrucción de Instalación:
-1. Descomprima este ZIP.
-2. Ejecute 'Install-Service.ps1' como Administrador.
-"@
-
-$ReleaseNotesPath = Join-Path -Path $PublishTempDir -ChildPath "RELEASE_NOTES.txt"
-$ReleaseNotesContent | Out-File $ReleaseNotesPath -Encoding UTF8
-
-# --- 4. Empaquetar para Distribución (Incluye la Nueva Política) ---
-Write-Host "4. Creando paquete de despliegue ZIP..." -ForegroundColor Green
-# No borramos la carpeta $ReleaseDir, solo nos aseguramos de que exista.
-if (-not (Test-Path $ReleaseDir -PathType Container)) {
-    New-Item -Path $ReleaseDir -ItemType Directory -Force | Out-Null
-}
-
-$ZipPath = Join-Path -Path $ReleaseDir -ChildPath $ReleaseZipName
-
-# Crear el archivo ZIP (se excluye el .pdb para reducir tamaño)
-Compress-Archive -Path "$PublishTempDir\*" -DestinationPath $ZipPath -Update
-
-# --- 5. Aplicar Política de Retención (Nuevo Paso) ---
-Write-Host "5. Aplicando política de retención (manteniendo los últimos $MaxReleasesToKeep releases)..." -ForegroundColor Yellow
-
-$OldReleases = Get-ChildItem -Path $ReleaseDir -Filter "*.zip" | Sort-Object LastWriteTime -Descending
-
-if ($OldReleases.Count -gt $MaxReleasesToKeep) {
-    # Selecciona los que están más allá del límite
-    $ReleasesToDelete = $OldReleases | Select-Object -Skip $MaxReleasesToKeep
-    
-    foreach ($Release in $ReleasesToDelete) {
-        Write-Host "   -> Eliminando release antiguo: $($Release.Name)" -ForegroundColor DarkGray
-        Remove-Item -Path $Release.FullName -Force
-    }
-} else {
-    Write-Host "   -> Número de releases menor o igual al límite. No se requiere limpieza." -ForegroundColor DarkGray
-}
-
-Write-Host ""
-Write-Host "✅ ¡Paquete de Despliegue Listo!" -ForegroundColor Cyan
-Write-Host "Ruta del paquete: $ZipPath" -ForegroundColor Cyan
-Write-Host "Instrucción para el usuario: Descomprima el ZIP y ejecute 'Install-Service.ps1' como Administrador." -ForegroundColor Yellow
-
-# --- Abrir Carpeta de Releases ---
-
-# Le informamos al usuario cómo puede abrir la carpeta:
-Write-Host "Para abrir la carpeta de Releases ahora mismo, presione [A] y luego Enter, o cualquier otra tecla para omitir." -ForegroundColor Yellow
-
-# Capturamos la entrada del usuario:
-$UserInput = Read-Host
-
-# Comprobamos si el usuario presionó 'A' o 'a'
-if ($UserInput -ceq "a") {
-    Write-Host "Abriendo carpeta: $ReleaseDir" -ForegroundColor DarkGray
-    # Usamos Invoke-Item (alias 'ii') para abrir la carpeta en el Explorador de Windows
-    Invoke-Item $ReleaseDir
-}
+finally { Write-Progress -Activity "Compilando Suite DAM" -Completed }
