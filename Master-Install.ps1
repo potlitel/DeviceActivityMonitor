@@ -16,29 +16,41 @@ function Confirm-Environment {
     Write-Host "Estacion: $($env:COMPUTERNAME) | Usuario: $($env:USERNAME)" -ForegroundColor Gray
 }
 
-# --- 2. Verificación del Hosting Bundle ---
-function Confirm-HostingBundle {
+# --- 2. Instalación del Hosting Bundle (Offline) ---
+function Install-HostingBundle {
     Write-Progress -Activity "Instalando DAM" -Status "Verificando ASP.NET Core Hosting Bundle..." -PercentComplete 15
     $modulePath = "C:\Windows\System32\inetsrv\aspnetcore.dll"
     $moduleV2Path = "C:\Windows\System32\inetsrv\aspnetcorev2.dll"
 
-    if (!(Test-Path $modulePath) -and !(Test-Path $moduleV2Path)) {
+    if ((Test-Path $modulePath) -or (Test-Path $moduleV2Path)) {
+        Write-Host "  [OK] ASP.NET Core Hosting Bundle detectado." -ForegroundColor Gray
+        return
+    }
+
+    Write-Host ""
+    Write-Host "Hosting Bundle no detectado. Instalando desde paquete offline..." -ForegroundColor Yellow
+
+    $BaseDir = Split-Path $PSCommandPath
+    $InstallerDir = Join-Path $BaseDir "Installers"
+    $Installer = Get-ChildItem -Path $InstallerDir -Filter "dotnet-hosting-*-win.exe" | Sort-Object Name -Descending | Select-Object -First 1
+
+    if (!$Installer) {
         Write-Host ""
-        Write-Host "REQUISITO CRITICO: ASP.NET Core Hosting Bundle no detectado." -ForegroundColor Yellow
-        Write-Host "Este modulo es obligatorio para ejecutar la API en IIS." -ForegroundColor Yellow
+        Write-Host "ERROR: Installer del Hosting Bundle no encontrado en el paquete." -ForegroundColor Red
+        Write-Host "Ejecute Download-Installers.ps1 antes de crear el release." -ForegroundColor Yellow
         Write-Host ""
-        Write-Host "Descargalo desde: https://dotnet.microsoft.com/download/dotnet" -ForegroundColor Cyan
-        Write-Host "Selecciona el .NET Hosting Bundle correspondiente a la version del proyecto." -ForegroundColor Cyan
-        Write-Host ""
-        $ans = Read-Host "¿Desea abrir la pagina de descarga ahora? (S/N)"
-        if ($ans -eq 's' -or $ans -eq 'S') {
-            Start-Process "https://dotnet.microsoft.com/download/dotnet"
-        }
-        Write-Host ""
-        Write-Host "ERROR: Instalacion cancelada. Instale el Hosting Bundle y vuelva a ejecutar este script." -ForegroundColor Red
         exit
     }
-    Write-Host "  [OK] ASP.NET Core Hosting Bundle detectado." -ForegroundColor Gray
+
+    Write-Host "  Instalando: $($Installer.Name)" -ForegroundColor Gray
+    $proc = Start-Process -FilePath $Installer.FullName -ArgumentList "/install", "/quiet", "/norestart" -Wait -PassThru -NoNewWindow
+    if ($proc.ExitCode -ne 0) {
+        Write-Host "ERROR: Fallo la instalacion del Hosting Bundle (ExitCode: $($proc.ExitCode))" -ForegroundColor Red
+        exit
+    }
+    Write-Host "  Reiniciando IIS para registrar el modulo..." -ForegroundColor Gray
+    & iisreset /restart | Out-Null
+    Write-Host "  [OK] Hosting Bundle instalado y IIS reiniciado." -ForegroundColor Green
 }
 
 # --- 3. Gestión de IIS ---
@@ -71,15 +83,27 @@ function Invoke-Deployment {
     $Acl.SetAccessRule($Rule)
     Set-Acl $InstallRoot $Acl
 
-    # 4.3 Copia de Archivos
+    # 4.3 Detener componentes existentes para liberar archivos
+    $svcExisted = Get-Service $SvcName -ErrorAction SilentlyContinue
+    if ($svcExisted -and $svcExisted.Status -eq 'Running') {
+        Write-Host "  Deteniendo servicio $SvcName..." -ForegroundColor Gray
+        Stop-Service $SvcName -Force -ErrorAction SilentlyContinue
+    }
+
+    Import-Module WebAdministration | Out-Null
+    if (Test-Path "IIS:\AppPools\$AppPool") {
+        Write-Host "  Reciclando AppPool $AppPool..." -ForegroundColor Gray
+        Restart-WebAppPool $AppPool -ErrorAction SilentlyContinue
+    }
+
+    # 4.4 Copia de Archivos (ahora sin bloqueo)
     Write-Progress -Activity "Instalando DAM" -Status "Copiando binarios..." -PercentComplete 40
     $BaseDir = Split-Path $PSCommandPath
     Copy-Item "$BaseDir\DAM.Api\*" -Destination "$InstallRoot\App\Api" -Recurse -Force
     Copy-Item "$BaseDir\DAM.Host.WindowsService\*" -Destination "$InstallRoot\App\Service" -Recurse -Force
 
-    # 4.4 Configuración IIS
+    # 4.5 Configuración IIS
     Write-Progress -Activity "Instalando DAM" -Status "Configurando IIS..." -PercentComplete 70
-    Import-Module WebAdministration | Out-Null
 
     if (!(Test-Path "IIS:\AppPools\$AppPool")) {
         New-WebAppPool $AppPool | Out-Null
@@ -92,13 +116,11 @@ function Invoke-Deployment {
         Set-ItemProperty "IIS:\Sites\$WebSite" -Name "physicalPath" -Value "$InstallRoot\App\Api"
     }
 
-    # 4.5 Configuración Windows Service
+    # 4.6 Configuración Windows Service
     Write-Progress -Activity "Instalando DAM" -Status "Configurando Servicio..." -PercentComplete 90
     $BinPath = "$InstallRoot\App\Service\DAM.Host.WindowsService.exe"
 
-    $svcExisted = Get-Service $SvcName -ErrorAction SilentlyContinue
     if ($svcExisted) {
-        Stop-Service $SvcName -Force -ErrorAction SilentlyContinue
         & sc.exe config $SvcName binPath= $BinPath | Out-Null
     } else {
         New-Service -Name $SvcName -BinaryPathName $BinPath -DisplayName "DAM Monitoring Service" -StartupType Automatic | Out-Null
@@ -154,7 +176,7 @@ function Show-Summary {
 try {
     Confirm-Environment
     Setup-IIS-Feature
-    Confirm-HostingBundle
+    Install-HostingBundle
     $result = Invoke-Deployment
     Write-Progress -Activity "Instalando DAM" -Status "Listo!" -PercentComplete 100
     Show-Summary -ServiceExisted $result.ServiceExisted
