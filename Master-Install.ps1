@@ -11,83 +11,156 @@ $SvcName = "DAM_Worker"
 function Confirm-Environment {
     $currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
     if (-not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
-        Write-Host "❌ ERROR: Ejecuta este script como Administrador." -ForegroundColor Red; exit
+        Write-Host "ERROR: Ejecuta este script como Administrador." -ForegroundColor Red; exit
     }
-    Write-Host "💻 Estación: $($env:COMPUTERNAME) | Usuario: $($env:USERNAME)" -ForegroundColor Gray
+    Write-Host "Estacion: $($env:COMPUTERNAME) | Usuario: $($env:USERNAME)" -ForegroundColor Gray
 }
 
-# --- 2. Gestión de IIS (Punto 5) ---
+# --- 2. Verificación del Hosting Bundle ---
+function Confirm-HostingBundle {
+    Write-Progress -Activity "Instalando DAM" -Status "Verificando ASP.NET Core Hosting Bundle..." -PercentComplete 15
+    $modulePath = "C:\Windows\System32\inetsrv\aspnetcore.dll"
+    $moduleV2Path = "C:\Windows\System32\inetsrv\aspnetcorev2.dll"
+
+    if (!(Test-Path $modulePath) -and !(Test-Path $moduleV2Path)) {
+        Write-Host ""
+        Write-Host "REQUISITO CRITICO: ASP.NET Core Hosting Bundle no detectado." -ForegroundColor Yellow
+        Write-Host "Este modulo es obligatorio para ejecutar la API en IIS." -ForegroundColor Yellow
+        Write-Host ""
+        Write-Host "Descargalo desde: https://dotnet.microsoft.com/download/dotnet" -ForegroundColor Cyan
+        Write-Host "Selecciona el .NET Hosting Bundle correspondiente a la version del proyecto." -ForegroundColor Cyan
+        Write-Host ""
+        $ans = Read-Host "¿Desea abrir la pagina de descarga ahora? (S/N)"
+        if ($ans -eq 's' -or $ans -eq 'S') {
+            Start-Process "https://dotnet.microsoft.com/download/dotnet"
+        }
+        Write-Host ""
+        Write-Host "ERROR: Instalacion cancelada. Instale el Hosting Bundle y vuelva a ejecutar este script." -ForegroundColor Red
+        exit
+    }
+    Write-Host "  [OK] ASP.NET Core Hosting Bundle detectado." -ForegroundColor Gray
+}
+
+# --- 3. Gestión de IIS ---
 function Setup-IIS-Feature {
     Write-Progress -Activity "Instalando DAM" -Status "Verificando IIS..." -PercentComplete 10
     $feature = Get-WindowsOptionalFeature -Online -FeatureName "IIS-WebServerRole"
     if ($feature.State -ne "Enabled") {
-        Write-Host "`n📢 Requisito: IIS no está habilitado." -ForegroundColor Yellow
-        $ans = Read-Host "¿Desea activar IIS y componentes .NET ahora? (S/N)"
+        Write-Host "`nREQUISITO: IIS no esta habilitado." -ForegroundColor Yellow
+        $ans = Read-Host "¿Desea activar IIS y componentes ahora? (S/N)"
         if ($ans -eq 's' -or $ans -eq 'S') {
-            Write-Host "⏳ Habilitando componentes de Windows (puede tardar)..." -ForegroundColor Cyan
-            Enable-WindowsOptionalFeature -Online -FeatureName "IIS-WebServerRole", "IIS-ASPNET45", "IIS-DefaultDocument", "IIS-ISAPIExtensions" -All -NoRestart
-        } else { Write-Host "❌ Instalación cancelada por el usuario."; exit }
+            Write-Host "Habilitando componentes de Windows (puede tardar)..." -ForegroundColor Cyan
+            Enable-WindowsOptionalFeature -Online -FeatureName "IIS-WebServerRole", "IIS-ASPNET45", "IIS-DefaultDocument", "IIS-ISAPIExtensions" -All -NoRestart | Out-Null
+        } else { Write-Host "ERROR: Instalacion cancelada por el usuario."; exit }
     }
 }
 
-# --- 3. Ejecución de Despliegue (Idempotente) ---
+# --- 4. Ejecución de Despliegue (Idempotente) ---
 function Invoke-Deployment {
-    # 3.1 Estructura (Single Source of Truth)
+    # 4.1 Estructura
     $Paths = @("App\Api", "App\Service", "Data", "Logs")
-    foreach ($p in $Paths) { 
+    foreach ($p in $Paths) {
         $full = Join-Path $InstallRoot $p
         if (!(Test-Path $full)) { New-Item $full -ItemType Directory -Force | Out-Null }
     }
 
-    # 3.2 Permisos de Escritura para SQLite y Logs
+    # 4.2 Permisos
+    $UsersSid = New-Object System.Security.Principal.SecurityIdentifier("S-1-5-32-545")
     $Acl = Get-Acl $InstallRoot
-    $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule("Users", "FullControl", "ContainerInherit,ObjectInherit", "None", "Allow")
+    $Rule = New-Object System.Security.AccessControl.FileSystemAccessRule($UsersSid, "Modify", "ContainerInherit,ObjectInherit", "None", "Allow")
     $Acl.SetAccessRule($Rule)
     Set-Acl $InstallRoot $Acl
 
-    # 3.3 Copia de Archivos
+    # 4.3 Copia de Archivos
     Write-Progress -Activity "Instalando DAM" -Status "Copiando binarios..." -PercentComplete 40
     $BaseDir = Split-Path $PSCommandPath
     Copy-Item "$BaseDir\DAM.Api\*" -Destination "$InstallRoot\App\Api" -Recurse -Force
     Copy-Item "$BaseDir\DAM.Host.WindowsService\*" -Destination "$InstallRoot\App\Service" -Recurse -Force
 
-    # 3.4 Configuración IIS
+    # 4.4 Configuración IIS
     Write-Progress -Activity "Instalando DAM" -Status "Configurando IIS..." -PercentComplete 70
-    Import-Module WebAdministration
-    if (!(Test-Path "IIS:\AppPools\$AppPool")) { New-WebAppPool $AppPool }
-    Set-ItemProperty "IIS:\AppPools\$AppPool" -Name "managedRuntimeVersion" -Value "" # .NET Core
+    Import-Module WebAdministration | Out-Null
+
+    if (!(Test-Path "IIS:\AppPools\$AppPool")) {
+        New-WebAppPool $AppPool | Out-Null
+    }
+    Set-ItemProperty "IIS:\AppPools\$AppPool" -Name "managedRuntimeVersion" -Value ""
 
     if (!(Test-Path "IIS:\Sites\$WebSite")) {
-        New-Website -Name $WebSite -Port $ApiPort -PhysicalPath "$InstallRoot\App\Api" -ApplicationPool $AppPool
+        New-Website -Name $WebSite -Port $ApiPort -PhysicalPath "$InstallRoot\App\Api" -ApplicationPool $AppPool | Out-Null
     } else {
         Set-ItemProperty "IIS:\Sites\$WebSite" -Name "physicalPath" -Value "$InstallRoot\App\Api"
     }
 
-    # 3.5 Configuración Windows Service
+    # 4.5 Configuración Windows Service
     Write-Progress -Activity "Instalando DAM" -Status "Configurando Servicio..." -PercentComplete 90
     $BinPath = "$InstallRoot\App\Service\DAM.Host.WindowsService.exe"
-    
-    if (Get-Service $SvcName -ErrorAction SilentlyContinue) {
+
+    $svcExisted = Get-Service $SvcName -ErrorAction SilentlyContinue
+    if ($svcExisted) {
         Stop-Service $SvcName -Force -ErrorAction SilentlyContinue
         & sc.exe config $SvcName binPath= $BinPath | Out-Null
     } else {
         New-Service -Name $SvcName -BinaryPathName $BinPath -DisplayName "DAM Monitoring Service" -StartupType Automatic | Out-Null
     }
-    Start-Service $SvcName
+    Start-Service $SvcName | Out-Null
+
+    return @{
+        ServiceExisted = ($null -ne $svcExisted)
+    }
+}
+
+# --- 5. Reporte Final ---
+function Show-Summary {
+    param ([bool]$ServiceExisted)
+
+    Write-Host ""
+    Write-Host "INSTALACION EXITOSA" -ForegroundColor Green
+    Write-Host "========================================" -ForegroundColor Gray
+
+    # Estado del Servicio Windows
+    $svc = Get-Service $SvcName -ErrorAction SilentlyContinue
+    if ($svc) {
+        $action = if ($ServiceExisted) { "Actualizado" } else { "Creado" }
+        Write-Host "[$action] Servicio: $($svc.DisplayName)" -ForegroundColor Gray
+        Write-Host "   Nombre    : $($svc.ServiceName)" -ForegroundColor Gray
+        Write-Host "   Estado    : $($svc.Status)" -ForegroundColor Gray
+        Write-Host "   Inicio    : $($svc.StartType)" -ForegroundColor Gray
+    } else {
+        Write-Host "  [ERROR] Servicio '$SvcName' no encontrado." -ForegroundColor Red
+    }
+
+    # Estado del Website IIS
+    Import-Module WebAdministration | Out-Null
+    $site = Get-Website $WebSite -ErrorAction SilentlyContinue
+    if ($site) {
+        $binding = $site.bindings.Collection[0]
+        Write-Host "[OK] Sitio IIS: $($site.Name)" -ForegroundColor Gray
+        Write-Host "   URL       : http://localhost:$ApiPort" -ForegroundColor Gray
+        Write-Host "   Estado    : $($site.State)" -ForegroundColor Gray
+        Write-Host "   AppPool   : $($site.applicationPool)" -ForegroundColor Gray
+        Write-Host "   Path      : $($site.PhysicalPath)" -ForegroundColor Gray
+    } else {
+        Write-Host "  [ERROR] Sitio IIS '$WebSite' no encontrado." -ForegroundColor Red
+    }
+
+    Write-Host ""
+    Write-Host "Ubicacion : $InstallRoot" -ForegroundColor Gray
+    Write-Host "API URL   : http://localhost:$ApiPort" -ForegroundColor Cyan
+    Write-Host "========================================" -ForegroundColor Gray
 }
 
 # --- Flujo de Ejecución ---
 try {
     Confirm-Environment
     Setup-IIS-Feature
-    Invoke-Deployment
-    Write-Progress -Activity "Instalando DAM" -Status "¡Listo!" -PercentComplete 100
-    Write-Host "`n✅ INSTALACIÓN EXITOSA" -ForegroundColor Green
-    Write-Host "📍 Ubicación: $InstallRoot"
-    Write-Host "🌐 API URL: http://localhost:$ApiPort" -ForegroundColor Cyan
+    Confirm-HostingBundle
+    $result = Invoke-Deployment
+    Write-Progress -Activity "Instalando DAM" -Status "Listo!" -PercentComplete 100
+    Show-Summary -ServiceExisted $result.ServiceExisted
 }
 catch {
-    Write-Host "`n❌ Error en la instalación: $($_.Exception.Message)" -ForegroundColor Red
+    Write-Host "`nERROR en la instalacion: $($_.Exception.Message)" -ForegroundColor Red
 }
 finally {
     Write-Progress -Activity "Instalando DAM" -Completed

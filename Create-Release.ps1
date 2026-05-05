@@ -197,11 +197,52 @@ try {
     }
 
     # Copiar Script de Instalación (Master-Install -> Install-Suite)
-    $MasterScript = Join-Path $SolutionDir "DeploymentScripts\Master-Install.ps1"
+    $MasterScript = Join-Path $SolutionDir "Master-Install.ps1"
     if (Test-Path $MasterScript) {
-        Copy-Item $MasterScript -Destination (Join-Path $Staging "Install-Suite.ps1")
-        Write-Host "📜 Script de instalación inyectado." -ForegroundColor Gray
+        Copy-Item $MasterScript -Destination (Join-Path $Staging "Install-Suite.ps1") -Force
+        Write-Host "  Script de instalación inyectado." -ForegroundColor Gray
     }
+
+    # Generar Readme.txt con instrucciones
+    $ReadmeContent = @"
+================================================================================
+     DAM-Suite | Instalación Offline
+     Versión: $BuildStamp
+================================================================================
+
+REQUISITOS PREVIOS:
+  - Windows 10/11 o Windows Server 2019+
+  - Ejecutar como Administrador
+  - ASP.NET Core Hosting Bundle instalado
+    (Descargar desde: https://dotnet.microsoft.com/download/dotnet)
+
+INSTALACIÓN:
+  1. Descomprima este ZIP en una carpeta temporal
+  2. Abra PowerShell como Administrador
+  3. Navegue a la carpeta descomprimida
+  4. Ejecute: .\Install-Suite.ps1
+  5. El script instalará automáticamente:
+     - IIS (si no está habilitado)
+     - API en http://localhost:7155
+     - Servicio Windows: DAM Monitoring Service
+
+DESTINO DE INSTALACIÓN:
+  C:\ProgramData\DAM-Suite
+
+ESTRUCTURA TRAS INSTALACIÓN:
+  App\Api\        -> Archivos de la API REST
+  App\Service\    -> Servicio de monitoreo Windows
+  Data\           -> Base de datos SQLite
+  Logs\           -> Registros de la aplicación
+
+SOPORTE:
+  Reporte issues o contacte al equipo de desarrollo.
+================================================================================
+"@
+
+    $ReadmePath = Join-Path $Staging "Readme.txt"
+    Set-Content -Path $ReadmePath -Value $ReadmeContent -Encoding UTF8
+    Write-Host "  Readme.txt generado." -ForegroundColor Gray
 
     # Empaquetado Final
     # MEJORA DE UX: Barra de progreso para la fase de ZIP
