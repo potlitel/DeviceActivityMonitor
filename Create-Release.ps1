@@ -70,7 +70,13 @@ try {
         $TargetFolder = Join-Path $Staging $Proj.Name
         Write-Host "Publicando $($Proj.Name)..." -ForegroundColor Gray
         
-        & dotnet publish $Proj.Path -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -o $TargetFolder --nologo
+        # DAM.Api no puede usar single-file (requerido por IIS)
+        $IsApi = $Proj.Name -eq "DAM.Api"
+        $SingleFile = if ($IsApi) { "" } else { "-p:PublishSingleFile=true" }
+        $PublishArgs = @("publish", $Proj.Path, "-c", "Release", "-r", "win-x64", "--self-contained", "true", "-o", $TargetFolder, "--nologo")
+        if ($SingleFile) { $PublishArgs += $SingleFile }
+        
+        & dotnet @PublishArgs
         
         if ($LASTEXITCODE -ne 0) { throw "Error publicando $($Proj.Name)" }
         
