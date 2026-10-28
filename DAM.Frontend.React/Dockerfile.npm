@@ -1,0 +1,39 @@
+# Fase de construcción - usando npm (funciona mejor con el proxy corporativo)
+FROM node:22-alpine AS build
+
+ENV HTTP_PROXY=http://172.16.65.61:3128
+ENV HTTPS_PROXY=http://172.16.65.61:3128
+ENV NO_PROXY=localhost,127.0.0.1,::1
+
+WORKDIR /app
+
+COPY package.json .npmrc ./
+
+# Instalar dependencias (incluye devDependencies: typescript, vite, plugins)
+RUN npm install --no-audit --no-fund --loglevel=warn
+
+COPY . .
+
+# URL de la API horneada en build (Vite expone vars VITE_*)
+ARG VITE_API_URL=http://localhost:8081/api
+ENV VITE_API_URL=$VITE_API_URL
+
+# Construir la aplicación (tsc type-check + vite build con rollup)
+RUN npm run build
+
+# Fase de ejecución
+FROM node:22-alpine AS runner
+
+WORKDIR /app
+
+ENV HTTP_PROXY=http://172.16.65.61:3128
+ENV HTTPS_PROXY=http://172.16.65.61:3128
+ENV NO_PROXY=localhost,127.0.0.1,::1
+
+RUN npm install -g serve
+
+COPY --from=build /app/dist ./dist
+
+EXPOSE 3000
+
+CMD ["serve", "-s", "dist", "-l", "3000"]

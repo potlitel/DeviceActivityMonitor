@@ -1,0 +1,65 @@
+# =====================================================================
+#  Device Activity Monitor (DAM) — Orquestación Docker
+# =====================================================================
+#  Uso:
+#    docker compose up -d --build   # Construir imágenes y levantar todo
+#    docker compose logs -f         # Ver logs en vivo
+#    docker compose ps              # Estado de los servicios
+#    docker compose down            # Detener (conserva la BD en el volumen)
+#    docker compose down -v         # Detener y BORRAR la BD SQLite (volumen)
+#
+#  ⚠️  Si ya tienes contenedores manuales ocupando los puertos 8081/3000
+#      (ej. dam-api-test / dam-frontend-react), deténlos primero:
+#      docker rm -f dam-api-test dam-frontend-react
+# =====================================================================
+
+services:
+
+  # =========================  API (.NET 8)  =========================
+  dam-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api.fixed
+    image: dam-api-fixed
+    container_name: dam-api
+    restart: unless-stopped
+    environment:
+      # ⚠️ CRÍTICO para onboarding: DbInitializer solo siembra los usuarios
+      # de prueba (admin@dam.com / Admin123!) cuando el entorno es Development.
+      # En Production la BD arranca vacía y el login falla.
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_HTTP_PORTS: "8080"
+    ports:
+      - "8081:8080"          # host:contenedor (la API escucha en 8080 internamente)
+    volumes:
+      - dam-data:/app/data   # SQLite (DAM_System.db) + logs persistentes
+    networks:
+      - dam-network
+
+  # ==================  FRONTEND REACT (Node 22)  ===================
+  dam-frontend:
+    build:
+      context: ./DAM.Frontend.React
+      dockerfile: Dockerfile.npm
+      args:
+        # URL de la API desde la PERSPECTIVA DEL NAVEGADOR (no del contenedor).
+        # Vite la hornea en el bundle en tiempo de build (variables VITE_*).
+        VITE_API_URL: ${VITE_API_URL:-http://localhost:8081/api}
+    image: dam-frontend-react
+    container_name: dam-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    depends_on:
+      - dam-api
+    networks:
+      - dam-network
+
+volumes:
+  dam-data:
+    name: dam-data
+
+networks:
+  dam-network:
+    name: dam-network
+    driver: bridge

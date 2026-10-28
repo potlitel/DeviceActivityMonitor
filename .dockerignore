@@ -1,0 +1,16 @@
+# Acelera el build de la API (Dockerfile.api.fixed) al no enviar
+# archivos innecesarios al daemon de Docker como contexto de build.
+.git
+.gitignore
+**/.git
+**/node_modules
+**/bin
+**/obj
+**/dist
+simple-frontend
+Releases
+*.log
+*.tar.gz
+*.deb
+packages-microsoft-prod.deb
+build_dam_api_minimal.log

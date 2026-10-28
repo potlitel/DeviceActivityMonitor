@@ -1,0 +1,47 @@
+# Usamos la imagen base de .NET
+FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+WORKDIR /src
+
+# Copiamos los archivos de la solución
+COPY *.sln .
+COPY DAM.Api/*.csproj DAM.Api/
+COPY DAM.Core/*.csproj DAM.Core/
+COPY DAM.Infrastructure/*.csproj DAM.Infrastructure/
+
+# Restauramos los paquetes para el proyecto API
+RUN dotnet restore DAM.Api/DAM.Api.csproj
+
+# Copiamos el resto del código
+COPY DAM.Api/ DAM.Api/
+COPY DAM.Core/ DAM.Core/
+COPY DAM.Infrastructure/ DAM.Infrastructure/
+
+# Publicamos la API
+RUN dotnet publish DAM.Api -c Release -o /app
+
+# Fase de ejecución
+FROM mcr.microsoft.com/dotnet/aspnet:8.0 AS runtime
+WORKDIR /app
+
+# Copiamos los archivos publicados
+COPY --from=build /app .
+
+# Configuramos el usuario para evitar problemas de permisos
+# RUN adduser --disabled-password appuser && chown -R appuser:appuser /app
+# USER appuser
+USER root
+
+# Exponemos el puerto
+EXPOSE 8080
+
+# Crear directorio para logs y base de datos
+RUN mkdir -p /app/data/Logs
+
+# Copiar configuración de contenedor
+COPY appsettings.container.json appsettings.json
+
+# Crear directorio para logs
+RUN mkdir -p /app/data/Logs
+
+# Comando para iniciar la aplicación
+CMD ["dotnet", "DAM.Api.dll"]

@@ -309,6 +309,109 @@ El `DeviceActivityWatcher` registra meticulosamente la siguiente información po
 
 * [**Estrategia de Pruebas**](./DAM.Tests.Monitoring/README_TESTS.md) -->
 
+## 🐳 Despliegue con Docker (docker compose)
+
+El proyecto incluye un `docker-compose.yml` canónico que levanta la **API (.NET 8)** y el **frontend React** en segundos, con la base de datos SQLite persistida en un volumen Docker.
+
+### 🚀 Inicio rápido
+
+```bash
+# Desde la raíz del repositorio
+docker compose up -d --build
+```
+
+Esto:
+1. Construye la imagen de la API (`Dockerfile.api.fixed`, multi-stage .NET 8).
+2. Construye la imagen del frontend (`DAM.Frontend.React/Dockerfile.npm`, Node 22 + npm + `serve`).
+3. Levanta ambos servicios: API en `http://localhost:8081`, frontend en `http://localhost:3000`.
+4. Siembra los usuarios de prueba automáticamente (entorno `Development`).
+
+### 🔑 Credenciales de prueba (dev)
+
+| Email | Contraseña | Rol |
+|-------|------------|-----|
+| `admin@dam.com` | `Admin123!` | Manager |
+| `manager@dam.com` | `Manager123!` | Manager |
+| `worker@dam.com` | `Worker123!` | Manager |
+
+> ⚠️ Solo para desarrollo. El `docker-compose.yml` setea `ASPNETCORE_ENVIRONMENT: Development` porque `DbInitializer` solo siembra usuarios en ese entorno.
+
+### 📖 Guía completa
+
+Para arquitectura, construcción manual de imágenes, configuración (`VITE_API_URL`), troubleshooting reales y notas de producción, ver **[docs/ONBOARDING_DOCKER.md](./docs/ONBOARDING_DOCKER.md)**.
+
+### 📋 Prerrequisitos
+
+* Docker Engine 24+ y Docker Compose v2+.
+* En redes corporativas con proxy: configurar `registry-mirrors` en `/etc/docker/daemon.json` (ver guía).
+* La API crea la base de datos SQLite automáticamente en el volumen `dam-data` (no requiere BD previa).
+
+### 🌐 Acceso al Frontend
+
+Una vez levantado el stack, abrir `http://localhost:3000` e iniciar sesión con `admin@dam.com` / `Admin123!`.
+
+El frontend es una SPA servida con `serve` (Node). La URL de la API se hornea en el bundle en tiempo de build mediante `VITE_API_URL` (por defecto `http://localhost:8081/api`); para cambiarla, editar `.env` y reconstruir:
+
+```bash
+docker compose up -d --build dam-frontend
+```
+
+### 🔧 Consideraciones Adicionales
+
+*   **Persistencia de Datos:** El volumen montado para la API (`/app/data`) asegura que los archivos de la base de datos SQLite se guarden en el host y no se pierdan si el contenedor se detiene o se elimina.
+*   **Red:** Asegúrate de que el firewall de Ubuntu permita el tráfico en los puertos mapeados (8081 para la API, y el puerto elegido para el frontend).
+*   **Proxy de Docker:** Si estás en una red empresarial que requiere un proxy para acceder a internet, asegúrate de que la configuración de proxy de Docker (`~/.docker/config.json`) esté correctamente configurada. Esto es crucial para que Docker pueda descargar las imágenes base durante el proceso de `docker build`.
+*   **Monitoreo:** Puedes usar `docker logs <container_name>` para ver los registros de ejecución de tus contenedores.
+*   **Actualizaciones:** Para actualizar la aplicación, simplemente detén los contenedores (`docker stop <container_name>`), elimina las imágenes antiguas (`docker rmi <image_name>`), vuelve a construir las imágenes con `docker build` y vuelve a ejecutar los contenedores.
+
+### 🐘 Docker Compose
+
+✅ El archivo `docker-compose.yml` **ya existe** en la raíz del repositorio y es la forma recomendada de levantar el stack (ver Inicio rápido arriba). Comandos útiles:
+
+```bash
+docker compose ps                          # estado de los servicios
+docker compose logs -f                     # logs en vivo
+docker compose down                        # detener (conserva la BD en el volumen)
+docker compose down -v                     # detener y BORRAR la BD SQLite
+docker compose up -d --build dam-frontend  # reconstruir solo el frontend
+```
+
+---
+
+### 🔧 Solución de Problemas Comunes
+
+#### Problemas de Permisos en `node_modules` (Frontend React)
+
+Si al intentar ejecutar comandos como `npm install` o `npm run build` en la carpeta `DAM.Frontend.React` encuentras errores de permiso (EACCES), es probable que los archivos en `node_modules` hayan sido creados por el usuario `root` o con permisos incorrectos.
+
+**Solución Manual:**
+
+1.  Abre una terminal en tu máquina local.
+2.  Navega a la carpeta del proyecto frontend si no estás ya en ella:
+    ```bash
+    cd /home/potlitel/Trabajo/Personal/DeviceActivityMonitor/DAM.Frontend.React
+    ```
+3.  Ejecuta el siguiente comando para cambiar el propietario de todos los archivos y carpetas dentro de `DAM.Frontend.React` al usuario `potlitel` (o tu usuario actual):
+    ```bash
+    sudo chown -R potlitel:potlitel .
+    ```
+    (Se te pedirá la contraseña de `sudo`).
+4.  Una vez corregidos los permisos, puedes intentar reinstalar las dependencias y construir el proyecto:
+    ```bash
+    npm install --legacy-peer-deps
+    npm run build
+    ```
+
+---
+
+### 🚀 Despliegue en Producción (Nginx / proxy inverso)
+
+Para producción se recomienda terminar HTTPS en un proxy inverso (nginx/traefik) delante del contenedor del frontend y/o la API, restringir CORS, cambiar el secreto JWT y **no** usar `ASPNETCORE_ENVIRONMENT: Development`.
+
+El detalle completo (arquitectura, configuración de `VITE_API_URL` para IPs remotas, notas de seguridad, respaldo del volumen `dam-data`) está documentado en **[docs/ONBOARDING_DOCKER.md](./docs/ONBOARDING_DOCKER.md)**, secciones 6 y 11.
+
+---
+
 ## 📚 Recursos y Documentación Especializada
 
 Esta sección contiene enlaces directos a la documentación detallada y a los manuales técnicos esenciales para comprender a fondo el proyecto.

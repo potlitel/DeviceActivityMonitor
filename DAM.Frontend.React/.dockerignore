@@ -1,0 +1,13 @@
+node_modules
+dist
+dist-ssr
+.git
+.gitignore
+*.log
+.env
+.env.local
+.env.*
+!.env.example
+coverage
+.nyc_output
+*.tsbuildinfo
