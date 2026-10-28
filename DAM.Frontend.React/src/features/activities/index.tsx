@@ -1,7 +1,6 @@
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
 import { Activity, Usb, Clock, HardDrive, Calendar } from 'lucide-react'
-import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import {
   Card,
@@ -20,9 +19,9 @@ export function Activities() {
   const search = route.useSearch()
   const navigate = route.useNavigate()
   
-  const pageNumber = search.pageNumber || 1
-  const pageSize = search.pageSize || 10
-  const serialFilter = search.serial as string | undefined
+  const pageNumber = search.pageNumber
+  const pageSize = search.pageSize
+  const serialFilter = search.serial
 
   const { data, isLoading, error } = useQuery({
     queryKey: ['activities', pageNumber, pageSize, serialFilter],

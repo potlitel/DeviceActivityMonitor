@@ -1,18 +1,17 @@
 import { getRouteApi } from '@tanstack/react-router'
 import { useQuery } from '@tanstack/react-query'
-import { ArrowLeft, Usb, Clock, HardDrive, FileText, Calendar } from 'lucide-react'
+import { ArrowLeft, Usb, Clock, HardDrive, FileText } from 'lucide-react'
 import { Header } from '@/components/layout/header'
 import { Main } from '@/components/layout/main'
 import {
   Card,
   CardContent,
-  CardDescription,
   CardHeader,
   CardTitle,
 } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { activitiesApi, type DeviceActivity } from '@/lib/api'
+import { activitiesApi } from '@/lib/api'
 
 const route = getRouteApi('/_authenticated/activities/$id')
 
